@@ -1,57 +1,186 @@
 ---
 name: firecrawl-agent
 description: |
-  AI-powered autonomous data extraction that navigates complex sites and returns structured JSON. Use this skill when the user wants structured data from websites, needs to extract pricing tiers, product listings, directory entries, or any data as JSON with a schema. Triggers on "extract structured data", "get all the products", "pull pricing info", "extract as JSON", or when the user provides a JSON schema for website data. More powerful than simple scraping for multi-page structured extraction.
+  AI-powered structured extraction from websites, via the hosted Firecrawl MCP. Use when users want structured data as JSON, need to extract pricing tiers, product listings, directory entries, case-study data, or any structured records across one or more pages — phrases like "extract structured data", "get all the products", "pull pricing info", "extract as JSON", "deep research", "find me across the web", or any time the user provides a JSON schema for website data. Routes between two tools: firecrawl_extract (when you have URLs and a schema — fast) and firecrawl_agent (when you don't know where the data lives — slow, autonomous). Do NOT trigger for single-page markdown scrape (use firecrawl-scrape), web search (use firecrawl-search), or bulk same-site content (use firecrawl-crawl).
 allowed-tools:
-  - Bash(firecrawl *)
-  - Bash(npx firecrawl *)
+  - mcp__firecrawl__firecrawl_extract
+  - mcp__firecrawl__firecrawl_agent
+  - mcp__firecrawl__firecrawl_agent_status
+  - Read
+  - Write
+  - Bash(mkdir *)
 ---
 
-# firecrawl agent
+# firecrawl-agent
 
-AI-powered autonomous extraction. The agent navigates sites and extracts structured data (takes 2-5 minutes).
+Two MCP tools cover structured extraction: `firecrawl_extract` (you know the URLs, you have a schema) and `firecrawl_agent` (autonomous research, open-ended).
 
-## When to use
+## Preflight
 
-- You need structured data from complex multi-page sites
-- Manual scraping would require navigating many pages
-- You want the AI to figure out where the data lives
+If `mcp__firecrawl__firecrawl_extract` or `mcp__firecrawl__firecrawl_agent` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
 
-## Quick start
+## Which Tool to Use
 
-```bash
-# Extract structured data
-firecrawl agent "extract all pricing tiers" --wait -o .firecrawl/pricing.json
+| Situation | Tool |
+|-----------|------|
+| You have specific URL(s) + schema, want JSON records back | `firecrawl_extract` |
+| You have a research question, no specific URLs, need the agent to go find | `firecrawl_agent` + `firecrawl_agent_status` (async poll) |
+| Multi-page same-site bulk extraction | Use `firecrawl-crawl` instead |
 
-# With a JSON schema for structured output
-firecrawl agent "extract products" --schema '{"type":"object","properties":{"name":{"type":"string"},"price":{"type":"number"}}}' --wait -o .firecrawl/products.json
+**Rule of thumb:** `firecrawl_extract` is faster and cheaper when you can name the URLs. Only use `firecrawl_agent` when you genuinely don't know where the data is.
 
-# Focus on specific pages
-firecrawl agent "get feature list" --urls "<url>" --wait -o .firecrawl/features.json
+## firecrawl_extract — Schema-Driven Extraction
+
+Sync. Point it at URLs + schema, get structured records.
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `urls` | string[] (required) | One or more URLs |
+| `prompt` | string | Natural-language extraction instruction |
+| `schema` | JSON schema object | Output shape |
+| `allowExternalLinks` | boolean | Follow off-domain links during extraction |
+| `enableWebSearch` | boolean | Allow web search for additional context |
+| `includeSubdomains` | boolean | Include subdomain pages |
+
+### Quick Start
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_extract",
+  "arguments": {
+    "urls": ["https://www.r365hub.com/pricing"],
+    "prompt": "Extract all pricing tiers including name, monthly price, user limits, features",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "monthly_price": { "type": "number" },
+              "user_limit": { "type": "integer" },
+              "features": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
-## Options
+### Multi-URL extract (one schema, many pages)
 
-| Option                 | Description                               |
-| ---------------------- | ----------------------------------------- |
-| `--urls <urls>`        | Starting URLs for the agent               |
-| `--model <model>`      | Model to use: spark-1-mini or spark-1-pro |
-| `--schema <json>`      | JSON schema for structured output         |
-| `--schema-file <path>` | Path to JSON schema file                  |
-| `--max-credits <n>`    | Credit limit for this agent run           |
-| `--wait`               | Wait for agent to complete                |
-| `--pretty`             | Pretty print JSON output                  |
-| `-o, --output <path>`  | Output file path                          |
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_extract",
+  "arguments": {
+    "urls": [
+      "https://competitor-a.com/pricing",
+      "https://competitor-b.com/pricing",
+      "https://competitor-c.com/pricing"
+    ],
+    "prompt": "Extract pricing tiers from each page",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "tiers": { "type": "array" }
+      }
+    }
+  }
+}
+```
+
+## firecrawl_agent — Autonomous Research (Async)
+
+The agent navigates the web on its own. Slow (minutes), expensive, but handles open-ended research when URLs are unknown.
+
+### Two-Step Async Flow
+
+1. Start a job with `mcp__firecrawl__firecrawl_agent` — returns a job id.
+2. Poll `mcp__firecrawl__firecrawl_agent_status` with `{ id }` every 10-30s until `status === "completed"`.
+
+### Parameters (firecrawl_agent)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `prompt` | string (required, max 10000 chars) | Natural-language research task |
+| `urls` | string[] | Starting URLs to focus the agent |
+| `schema` | JSON schema | Structured output shape |
+
+### Parameters (firecrawl_agent_status)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (required) | Job id from `firecrawl_agent` response |
+
+### Quick Start
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_agent",
+  "arguments": {
+    "prompt": "Find all US-based hospitality workforce management vendors with published pricing pages, and extract their pricing tiers",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "vendors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string" },
+              "tiers": { "type": "array" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Then poll:
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_agent_status",
+  "arguments": { "id": "agent-abc123" }
+}
+```
+
+### Agent with starting URLs (faster)
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_agent",
+  "arguments": {
+    "prompt": "Extract all case studies with customer name, industry, and headline result",
+    "urls": [
+      "https://deputy.com/case-studies",
+      "https://7shifts.com/case-studies"
+    ]
+  }
+}
+```
 
 ## Tips
 
-- Always use `--wait` to get results inline. Without it, returns a job ID.
-- Use `--schema` for predictable, structured output — otherwise the agent returns freeform data.
-- Agent runs consume more credits than simple scrapes. Use `--max-credits` to cap spending.
-- For simple single-page extraction, prefer `scrape` — it's faster and cheaper.
+- **Prefer `firecrawl_extract` when you can name URLs.** It's dramatically cheaper than `firecrawl_agent`.
+- **Always provide a `schema`** for `firecrawl_extract` — otherwise you get freeform JSON that's hard to post-process.
+- **Agent runs take minutes.** Kick off the job, poll every 10-30s, don't block on it.
+- **`enableWebSearch: true`** on extract lets it pull supporting context from the broader web. Helpful for enrichment, more expensive.
+- **Credit budget:** extract is ~5-20 credits per URL depending on schema complexity; agent runs are 100-1000+ credits. Check balance at `firecrawl.dev/app` before launching an agent.
 
-## See also
+## See Also
 
-- [firecrawl-scrape](../firecrawl-scrape/SKILL.md) — simpler single-page extraction
-- [firecrawl-instruct](../firecrawl-instruct/SKILL.md) — scrape + interact for manual page interaction (more control)
-- [firecrawl-crawl](../firecrawl-crawl/SKILL.md) — bulk extraction without AI
+- `../firecrawl-scrape/SKILL.md` — single-page markdown or schema JSON (cheaper for one URL)
+- `../firecrawl-crawl/SKILL.md` — bulk same-site extraction
+- `../firecrawl-search/SKILL.md` — discover sources first when your research is news-led
+- `../competitor-intel/SKILL.md` — Fourth-specific schema-driven competitor research
+- `../content-gap-analysis/SKILL.md` — Fourth-specific three-way gap analysis using this tool

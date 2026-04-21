@@ -1,78 +1,94 @@
-# fourth-firecrawl
+# Fourth Firecrawl
 
-Fork of [firecrawl/firecrawl-claude-plugin](https://github.com/firecrawl/firecrawl-claude-plugin) — customized for the Fourth AI Enablement Team.
+Fork of [firecrawl/firecrawl-claude-plugin](https://github.com/firecrawl/firecrawl-claude-plugin) — customized for the Fourth AI Enablement Team. Licensed under AGPL-3.0.
 
-Adds task-oriented research skills for competitor intelligence, hospitality market scanning, content gap analysis, and staged KB ingestion into Fourth Marketing Brain. Bundles curated source catalogs and pre-built extraction schemas on top of the upstream Firecrawl CLI integration.
+## What it is
 
-The base plugin turns any website into clean, LLM-ready markdown or structured data directly from Claude Code. The Fourth layer makes that capability actionable for specific research workflows the team runs repeatedly — competitor pricing sweeps before EBRs, weekly hospitality news briefings, and landing approved research into the Marketing Brain KB without manual copy-paste.
+The fourth-firecrawl plugin connects Claude to the Firecrawl web-scraping platform via the hosted Firecrawl MCP at `https://mcp.firecrawl.dev/v2/mcp`. It layers four task-oriented research skills on top of that connection to give Fourth team members repeatable, credit-aware workflows for competitive intelligence, market monitoring, and staged KB ingestion.
 
-## Fourth-specific features
+- **Competitor intelligence** — schema-driven pricing, feature, and case-study extraction from a curated registry of named competitors (R365, 7shifts, Deputy, UKG, Toast, and more)
+- **Hospitality market scanning** — weekly sweeps across trade press (NRN, FSR Magazine, Skift, Hotel Management, QSR, Restaurant Dive) for trends and signals
+- **Content gap analysis** — identify topics competitors publish that Fourth does not, feeding content strategy and EBR preparation
+- **Staged KB ingestion** — all research lands in `.firecrawl/` for human review before the `kb-ingest-review` skill pushes approved content to the Fourth Marketing Brain knowledge base via MCP
 
-- **Task-oriented skills** — competitor-intel, market-scan, content-gap-analysis, and kb-ingest-review replace ad-hoc prompting with consistent, repeatable workflows
-- **Curated source catalogs** — competitor registry (R365, 7shifts, Deputy, UKG, Toast, and more) and hospitality trade press catalog (NRN, FSR, Skift, Hotel Management, QSR, HR Dive) with verified URLs
-- **Pre-built extraction schemas** — JSON schemas for pricing pages, feature comparisons, case studies, and press releases ensure comparable structured output across vendors
-- **Staged KB ingestion** — all research lands in `.firecrawl/` for human review before the `kb-ingest-review` skill pushes approved content to the Marketing Brain KB via MCP
-- **Credit guardrails** — per-operation caps and escalation thresholds applied automatically; per-user quota, not a shared pool
+## How it works
 
-## Getting started
+1. **Scrape or search** — Claude calls one or more Firecrawl MCP tools (`mcp__firecrawl__firecrawl_scrape`, `mcp__firecrawl__firecrawl_search`, `mcp__firecrawl__firecrawl_extract`, etc.) using your personal API key. Requests are billed against your individual Firecrawl credit quota, not a shared pool.
+2. **Stage in `.firecrawl/`** — results are written to subdirectories under `.firecrawl/` in your working directory. These files are gitignored and exist for review only.
+3. **Review and ingest** — after confirming the staged output, `kb-ingest-review` calls the Fourth Marketing Brain MCP to create or update KB entries with source metadata.
 
-**Team members:** run `/fourth-firecrawl:setup` in Claude Code, then read `QUICKSTART.md`.
+## Install
 
-**Prerequisites:** Node.js 18+, Claude Code, plugin installed via Cowork organization plugins. No Firecrawl account needed before setup — the setup command walks you through it.
+### Cowork
+
+1. An org admin adds `fourth-ai/fourth-firecrawl` via **Organization Settings → Plugins → Add plugin**.
+2. Browse to the plugin in the org plugin library and click **Install**.
+3. Run `/fourth-firecrawl:setup` to connect your personal Firecrawl API key via the Cowork connector UI.
+
+### Claude Code CLI
+
+```bash
+# Add marketplace and install
+claude plugin marketplace add fourth-ai/fourth-firecrawl
+claude plugin install fourth-firecrawl@fourth-firecrawl
+```
+
+Then run `/fourth-firecrawl:setup` to configure your API key.
+
+Both paths require a personal Firecrawl API key. See `QUICKSTART.md` and `commands/setup.md` for the full key-setup walkthrough.
 
 ## Plugin structure
 
 ```
-firecrawl-plugin/
+fourth-firecrawl/
 ├── .claude-plugin/
-│   ├── plugin.json               Plugin manifest (name, skills array, license)
+│   ├── plugin.json               Plugin manifest
 │   └── marketplace.json          Cowork marketplace metadata
+│
+├── .mcp.json                     Firecrawl MCP connector declaration
 │
 ├── commands/
 │   └── setup.md                  /fourth-firecrawl:setup slash command
 │
-├── references/                   Plugin-wide reference docs
+├── references/
 │   ├── competitor-registry.md    Competitor URLs + schema assignments
 │   ├── hospitality-sources.md    Trade press URL catalog
 │   ├── fourth-voice-guide.md     Tone rules for summarizing scraped content
 │   ├── routing.md                Decision table: which skill for which task
-│   └── extraction-schemas/       JSON extraction schemas
+│   ├── credit-budget.md          Per-operation credit caps and escalation thresholds
+│   ├── firecrawl-mcp-spec.md     MCP tool reference (implementation notes)
+│   └── extraction-schemas/
 │       ├── pricing-page.json
 │       ├── feature-comparison.json
 │       ├── case-study.json
 │       └── press-release.json
 │
 ├── skills/
-│   ├── firecrawl-cli/            Base CLI skill (upstream, preserved)
-│   │   ├── SKILL.md
-│   │   └── rules/
-│   │       ├── install.md        Installation + auth instructions
-│   │       ├── security.md       Output handling guidelines
-│   │       └── credit-budget.md  Cost guardrails (Fourth addition)
-│   │
-│   ├── firecrawl-scrape/         Upstream skill
-│   ├── firecrawl-search/         Upstream skill
-│   ├── firecrawl-map/            Upstream skill
-│   ├── firecrawl-crawl/          Upstream skill
-│   ├── firecrawl-agent/          Upstream skill
-│   ├── firecrawl-instruct/       Upstream skill
-│   ├── firecrawl-download/       Upstream skill
-│   │
+│   ├── firecrawl-scrape/         Single-URL scrape via MCP
+│   ├── firecrawl-search/         Web search via MCP
+│   ├── firecrawl-map/            URL discovery via MCP
+│   ├── firecrawl-crawl/          Async bulk crawl via MCP
+│   ├── firecrawl-agent/          Autonomous research agent via MCP
+│   ├── firecrawl-interact/       Browser interaction via MCP (scrape + interact)
 │   ├── competitor-intel/         Fourth skill — schema-driven competitor scraping
 │   ├── market-scan/              Fourth skill — hospitality trade press sweeps
 │   ├── content-gap-analysis/     Fourth skill — identify coverage gaps vs. competitors
 │   └── kb-ingest-review/         Fourth skill — review + ingest to Marketing Brain KB
 │
 ├── QUICKSTART.md                 Team onboarding guide
-├── CHANGES-FROM-UPSTREAM.md     Tracked diff from upstream repository
+├── CHANGES-FROM-UPSTREAM.md      Tracked diff from upstream repository
 ├── NOTICE                        Attribution and licensing
 └── LICENSE                       AGPL-3.0 full text
 ```
 
 ## Attribution
 
-This plugin is a fork of [firecrawl/firecrawl-claude-plugin](https://github.com/firecrawl/firecrawl-claude-plugin), copyright Firecrawl, licensed under AGPL-3.0. Fourth's additions are documented in `CHANGES-FROM-UPSTREAM.md`. See `NOTICE` for the full attribution statement.
+See `NOTICE` for the full attribution statement. `CHANGES-FROM-UPSTREAM.md` documents all divergence from the upstream [firecrawl/firecrawl-claude-plugin](https://github.com/firecrawl/firecrawl-claude-plugin) repository.
 
 ## License
 
 Licensed under AGPL-3.0, consistent with the upstream plugin. See `LICENSE` for the full text.
+
+---
+
+See `QUICKSTART.md` to get running in 5 minutes.

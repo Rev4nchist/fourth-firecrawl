@@ -1,58 +1,158 @@
 ---
 name: firecrawl-crawl
 description: |
-  Bulk extract content from an entire website or site section. Use this skill when the user wants to crawl a site, extract all pages from a docs section, bulk-scrape multiple pages following links, or says "crawl", "get all the pages", "extract everything under /docs", "bulk extract", or needs content from many pages on the same site. Handles depth limits, path filtering, and concurrent extraction.
+  Bulk-extract content from an entire website or site section, via the hosted Firecrawl MCP. Use when users want to crawl a site, extract all pages from a docs section, or bulk-scrape multiple pages following links — phrases like "crawl", "get all the pages", "extract everything under /docs", "bulk extract", or any request for content from many pages on the same site. Handles depth limits, path filtering, and concurrent extraction. Async: returns a job id that must be polled with firecrawl_check_crawl_status. Do NOT trigger for single-page scrape (use firecrawl-scrape), URL discovery only (use firecrawl-map), or schema-driven extract across known URLs (use firecrawl-agent).
 allowed-tools:
-  - Bash(firecrawl *)
-  - Bash(npx firecrawl *)
+  - mcp__firecrawl__firecrawl_crawl
+  - mcp__firecrawl__firecrawl_check_crawl_status
+  - Read
+  - Write
+  - Bash(mkdir *)
 ---
 
-# firecrawl crawl
+# firecrawl-crawl
 
-Bulk extract content from a website. Crawls pages following links up to a depth/limit.
+Async bulk extraction via the hosted Firecrawl MCP. Starts a crawl job, returns a job id, and you poll for status + results.
 
-## When to use
+## Preflight
 
-- You need content from many pages on a site (e.g., all `/docs/`)
+If `mcp__firecrawl__firecrawl_crawl` or `mcp__firecrawl__firecrawl_check_crawl_status` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+
+## When to Use
+
+- You need content from many pages on a single site (e.g., all `/docs/`)
 - You want to extract an entire site section
-- Step 4 in the [workflow escalation pattern](firecrawl-cli): search → scrape → map → **crawl** → interact
+- Step 4 in the workflow escalation pattern: search → scrape → map → **crawl** → interact
 
-## Quick start
+## Two-Step Async Flow
 
-```bash
-# Crawl a docs section
-firecrawl crawl "<url>" --include-paths /docs --limit 50 --wait -o .firecrawl/crawl.json
+Crawls run asynchronously. You must:
 
-# Full crawl with depth limit
-firecrawl crawl "<url>" --max-depth 3 --wait --progress -o .firecrawl/crawl.json
+1. Call `mcp__firecrawl__firecrawl_crawl` — returns `{ id, url }`.
+2. Poll `mcp__firecrawl__firecrawl_check_crawl_status` with `{ id }` every 10-30s until `status` is `completed`.
+3. When complete, the status response contains the extracted pages.
 
-# Check status of a running crawl
-firecrawl crawl <job-id>
+## Quick Start
+
+### Step 1 — start the crawl
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_crawl",
+  "arguments": {
+    "url": "https://docs.example.com",
+    "includePaths": ["/docs"],
+    "limit": 50,
+    "scrapeOptions": {
+      "formats": ["markdown"],
+      "onlyMainContent": true
+    }
+  }
+}
 ```
 
-## Options
+Response contains an `id`, e.g. `"crawl-abc123"`.
 
-| Option                    | Description                                 |
-| ------------------------- | ------------------------------------------- |
-| `--wait`                  | Wait for crawl to complete before returning |
-| `--progress`              | Show progress while waiting                 |
-| `--limit <n>`             | Max pages to crawl                          |
-| `--max-depth <n>`         | Max link depth to follow                    |
-| `--include-paths <paths>` | Only crawl URLs matching these paths        |
-| `--exclude-paths <paths>` | Skip URLs matching these paths              |
-| `--delay <ms>`            | Delay between requests                      |
-| `--max-concurrency <n>`   | Max parallel crawl workers                  |
-| `--pretty`                | Pretty print JSON output                    |
-| `-o, --output <path>`     | Output file path                            |
+### Step 2 — poll status
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_check_crawl_status",
+  "arguments": {
+    "id": "crawl-abc123"
+  }
+}
+```
+
+Repeat until `status === "completed"`. Response will contain the crawled pages.
+
+## Parameters (firecrawl_crawl)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `url` | string (required) | Root URL to crawl |
+| `prompt` | string | Natural-language scope hint for the crawler |
+| `includePaths` / `excludePaths` | string[] | URL path filters |
+| `maxDiscoveryDepth` | number | Max link depth to follow |
+| `sitemap` | enum | `include`, `skip`, or `only` |
+| `limit` | number | Max pages (cap this — 50-100 is a safe default) |
+| `allowExternalLinks` | boolean | Follow links off-domain |
+| `allowSubdomains` | boolean | Follow subdomains |
+| `crawlEntireDomain` | boolean | Ignore path restrictions |
+| `delay` | number | ms between requests (respect target) |
+| `maxConcurrency` | number | Parallel workers |
+| `deduplicateSimilarURLs` | boolean | Skip near-duplicate URLs |
+| `ignoreQueryParameters` | boolean | Dedupe by stripping `?foo=bar` |
+| `scrapeOptions` | object | Per-page scrape config (formats, onlyMainContent, etc.) |
+
+## Parameters (firecrawl_check_crawl_status)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (required) | Job id from `firecrawl_crawl` response |
+
+## Examples
+
+### Crawl a docs section
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_crawl",
+  "arguments": {
+    "url": "https://docs.r365hub.com",
+    "includePaths": ["/docs"],
+    "limit": 50,
+    "maxDiscoveryDepth": 3,
+    "scrapeOptions": {
+      "formats": ["markdown"],
+      "onlyMainContent": true
+    }
+  }
+}
+```
+
+### Crawl with exclusions
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_crawl",
+  "arguments": {
+    "url": "https://www.example.com",
+    "excludePaths": ["/admin", "/careers", "/legal"],
+    "limit": 100,
+    "scrapeOptions": {
+      "formats": ["markdown"],
+      "onlyMainContent": true
+    }
+  }
+}
+```
+
+### Crawl with subdomains
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_crawl",
+  "arguments": {
+    "url": "https://example.com",
+    "allowSubdomains": true,
+    "limit": 150,
+    "delay": 500
+  }
+}
+```
 
 ## Tips
 
-- Always use `--wait` when you need the results immediately. Without it, crawl returns a job ID for async polling.
-- Use `--include-paths` to scope the crawl — don't crawl an entire site when you only need one section.
-- Crawl consumes credits per page. Check `firecrawl credit-usage` before large crawls.
+- **Always set `limit`.** Uncapped crawls can burn hundreds of credits on a large site.
+- **Prefer `includePaths`** over `maxDiscoveryDepth` — it's more predictable.
+- **Poll at 10-30s intervals.** Large crawls take minutes.
+- **Crawl responses can be huge.** The tool warns about token overflow — expect to process in batches or filter by URL after completion.
+- **Credit budget:** crawl is ~1 credit per page scraped. A 100-page crawl is ~100 credits. Check balance at `firecrawl.dev/app`.
 
-## See also
+## See Also
 
-- [firecrawl-scrape](../firecrawl-scrape/SKILL.md) — scrape individual pages
-- [firecrawl-map](../firecrawl-map/SKILL.md) — discover URLs before deciding to crawl
-- [firecrawl-download](../firecrawl-download/SKILL.md) — download site to local files (uses map + scrape)
+- `../firecrawl-scrape/SKILL.md` — single-page scrape
+- `../firecrawl-map/SKILL.md` — discover URLs before deciding to crawl
+- `../firecrawl-agent/SKILL.md` — schema-driven extract across multiple known URLs
+- `../competitor-intel/SKILL.md` — Fourth-specific crawl patterns for competitor sites

@@ -9,17 +9,6 @@ allowed-tools:
   - Bash(date *)
   - Read
   - Write
-triggers:
-  - ingest competitor intel to KB
-  - review firecrawl staging
-  - push this research to marketing brain
-  - ingest the [research] data
-  - review and ingest today's market scan
-  - publish firecrawl output to KB
-  - what is in the firecrawl staging area
-  - move staged content to the knowledge base
-  - ingest staged research
-version: 1.0.0
 ---
 
 # KB Ingest Review
@@ -196,12 +185,11 @@ This directory is the source of truth for "what did we push to the KB and when".
 
 ## Cost
 
-This skill does not call Firecrawl — no credits consumed. The cost is entirely MCP calls to `fourth-marketing-brain`, which should be metered on the KB side, not the Firecrawl side. The `${CLAUDE_PLUGIN_ROOT}/skills/firecrawl-cli/rules/credit-budget.md` reference is still relevant because upstream skills (`competitor-intel`, `market-scan`) feed this one.
+This skill does not call Firecrawl — no credits consumed. The cost is entirely MCP calls to `fourth-marketing-brain`, which should be metered on the KB side, not the Firecrawl side. Upstream skills (`competitor-intel`, `market-scan`, `content-gap-analysis`) feed this one and consume Firecrawl credits; see each for its own cost notes.
 
 ## See Also
 
 - `../competitor-intel` — produces staging in `.firecrawl/competitor-intel/`
 - `../market-scan` — produces staging in `.firecrawl/market-scan/`
 - `../content-gap-analysis` — produces staging in `.firecrawl/content-gaps/`
-- `../firecrawl-scrape`, `../firecrawl-search`, `../firecrawl-map`, `../firecrawl-crawl`, `../firecrawl-agent` — upstream Firecrawl skills whose output can also feed this review stage
-- `../firecrawl-cli/rules/security.md` — output handling and safe file-reading patterns
+- `../firecrawl-scrape/SKILL.md`, `../firecrawl-search/SKILL.md`, `../firecrawl-map/SKILL.md`, `../firecrawl-crawl/SKILL.md`, `../firecrawl-agent/SKILL.md` — upstream Firecrawl primitives whose output can also feed this review stage

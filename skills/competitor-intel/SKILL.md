@@ -1,25 +1,17 @@
 ---
 name: competitor-intel
 description: |
-  Scrape and structure competitor intelligence (pricing, features, case studies, customer logos) from Fourth's curated competitor registry. Uses pre-built JSON extraction schemas to produce comparable, structured output across vendors. Use this skill when the user says "research R365 pricing", "get competitor intel on 7shifts", "pull Deputy features", "compare HCM competitors", "what's Paycom charging", "scrape competitor pricing pages", or names any competitor in Fourth's registry (Restaurant365, 7shifts, Deputy, HotSchedules, When I Work, Paycom, UKG, Toast, Paylocity). Output is staged in `.firecrawl/competitor-intel/` for review before ingestion to the Marketing Brain KB. Do NOT trigger for general web search, customer research (use ebr-research for that), or one-off URL scraping (use firecrawl-scrape).
+  Scrape and structure competitor intelligence (pricing, features, case studies, customer logos) from Fourth's curated competitor registry. Uses pre-built JSON extraction schemas to produce comparable, structured output across vendors. Use when users request competitor research — phrases like "research R365 pricing", "get competitor intel on 7shifts", "pull Deputy features", "compare HCM competitors", "what's Paycom charging", "scrape competitor pricing pages", "competitive analysis on R365", or any named competitor in Fourth's registry (Restaurant365, 7shifts, Deputy, HotSchedules, When I Work, Paycom, UKG, Toast, Paylocity). Output is staged in `.firecrawl/competitor-intel/` for review before ingestion to the Marketing Brain KB. Do NOT trigger for general web search, customer research (use ebr-research for that), or one-off URL scraping (use firecrawl-scrape).
 allowed-tools:
-  - Bash(firecrawl *)
-  - Bash(npx firecrawl *)
+  - mcp__firecrawl__firecrawl_scrape
+  - mcp__firecrawl__firecrawl_map
+  - mcp__firecrawl__firecrawl_extract
+  - mcp__firecrawl__firecrawl_agent
+  - mcp__firecrawl__firecrawl_agent_status
   - Bash(mkdir *)
   - Bash(date *)
   - Read
   - Write
-triggers:
-  - research [competitor] pricing
-  - get competitor intel on [vendor]
-  - scrape [competitor] features
-  - compare HCM competitors
-  - competitive analysis on R365
-  - what is 7shifts charging
-  - pull Deputy case studies
-  - Paycom vs Fourth pricing
-  - refresh competitor pricing data
-version: 1.0.0
 ---
 
 # Competitor Intel
@@ -48,12 +40,12 @@ Targeted, schema-driven competitor research. Produces structured, comparable int
 
 ## Prerequisites
 
-1. Firecrawl CLI authenticated: `firecrawl --status` (see `../firecrawl-cli/rules/install.md` if not).
+1. Firecrawl MCP must be connected — if `mcp__firecrawl__firecrawl_extract` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
 2. Read the competitor registry to resolve name -> URLs:
    - `${CLAUDE_PLUGIN_ROOT}/references/competitor-registry.md`
 3. Pick the extraction schema that matches your intent:
    - `${CLAUDE_PLUGIN_ROOT}/references/extraction-schemas/` (pricing-page.json, feature-list.json, case-study.json, etc.)
-4. Confirm the request will respect the credit budget — see `${CLAUDE_PLUGIN_ROOT}/skills/firecrawl-cli/rules/credit-budget.md`.
+4. Confirm the request will respect the credit budget — see `${CLAUDE_PLUGIN_ROOT}/references/credit-budget.md` if present, or default caps in the Cost section below.
 
 ## Known Competitors
 
@@ -74,68 +66,151 @@ The full URL catalog (pricing pages, resources, case study indices) lives in `${
 ## Workflow
 
 1. **Resolve competitor** -> read registry, pick URLs relevant to the topic (pricing / features / case studies).
-2. **Pick schema** -> match intent to a schema file under `references/extraction-schemas/`.
+2. **Pick schema** -> match intent to a schema file under `${CLAUDE_PLUGIN_ROOT}/references/extraction-schemas/`.
 3. **Stage output directory** -> `mkdir -p .firecrawl/competitor-intel`.
-4. **Run `firecrawl agent` with schema** (or `firecrawl scrape` for simple pages) with `--max-credits` budget.
-5. **Review the staged file** -> `head`, `jq`, or Read the output.
-6. **Next step:** suggest running the `kb-ingest-review` skill to push approved content into the Marketing Brain KB with source metadata `competitor-crawl`.
+4. **Run `mcp__firecrawl__firecrawl_extract` with schema** (or `mcp__firecrawl__firecrawl_scrape` for simple single pages).
+5. **Write the result** to `.firecrawl/competitor-intel/<slug>-<topic>-<YYYYMMDD>.json` using the Write tool.
+6. **Review the staged file** -> Read the output.
+7. **Next step:** suggest running the `kb-ingest-review` skill to push approved content into the Marketing Brain KB with source metadata `competitor-crawl`.
 
 ## Examples
 
-### Pricing extraction with schema
+First, always stage the output directory:
 
 ```bash
 mkdir -p .firecrawl/competitor-intel
-firecrawl agent "extract pricing tiers for Restaurant365" \
-  --urls "https://restaurant365.com/pricing" \
-  --schema-file "${CLAUDE_PLUGIN_ROOT}/references/extraction-schemas/pricing-page.json" \
-  --wait --max-credits 500 \
-  -o ".firecrawl/competitor-intel/r365-pricing-$(date +%Y%m%d).json"
 ```
+
+Read the schema file with the Read tool, then inline it into the MCP call.
+
+### Pricing extraction with schema (preferred — use firecrawl_extract)
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_extract",
+  "arguments": {
+    "urls": ["https://restaurant365.com/pricing"],
+    "prompt": "Extract pricing tiers for Restaurant365 including name, monthly price, user limits, features",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "monthly_price": { "type": "number" },
+              "user_limit": { "type": "integer" },
+              "features": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Then Write the result to `.firecrawl/competitor-intel/r365-pricing-<YYYYMMDD>.json`.
 
 ### Feature list across multiple pages
 
-```bash
-firecrawl agent "extract the full feature list with categories" \
-  --urls "https://7shifts.com/features" \
-  --schema-file "${CLAUDE_PLUGIN_ROOT}/references/extraction-schemas/feature-list.json" \
-  --wait --max-credits 750 \
-  -o ".firecrawl/competitor-intel/7shifts-features-$(date +%Y%m%d).json"
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_extract",
+  "arguments": {
+    "urls": [
+      "https://7shifts.com/features",
+      "https://7shifts.com/features/scheduling",
+      "https://7shifts.com/features/labor-compliance"
+    ],
+    "prompt": "Extract the full feature list with categories, descriptions, and target personas",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": { "type": "string" },
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
 ### Case studies (map + scrape)
 
-```bash
-# Find the case study index pages first
-firecrawl map "https://deputy.com/case-studies" --limit 50 --json \
-  -o ".firecrawl/competitor-intel/deputy-case-study-urls.json"
+Step 1 — discover case study URLs:
 
-# Then batch-scrape concurrently
-firecrawl scrape \
-  "https://deputy.com/case-studies/restaurant-brand-a" \
-  "https://deputy.com/case-studies/restaurant-brand-b" \
-  --only-main-content
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_map",
+  "arguments": {
+    "url": "https://deputy.com/case-studies",
+    "limit": 50
+  }
+}
 ```
 
-### Simple pricing page (no AI, cheaper)
+Step 2 — scrape a selected case study (repeat for each URL):
 
-```bash
-firecrawl scrape "https://wheniwork.com/pricing" \
-  --only-main-content --wait-for 2000 \
-  -o ".firecrawl/competitor-intel/wiw-pricing-$(date +%Y%m%d).md"
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_scrape",
+  "arguments": {
+    "url": "https://deputy.com/case-studies/restaurant-brand-a",
+    "formats": ["markdown"],
+    "onlyMainContent": true
+  }
+}
 ```
 
-## Options Used
+### Simple pricing page (no schema, cheaper)
 
-| Flag | Source skill | Notes |
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_scrape",
+  "arguments": {
+    "url": "https://wheniwork.com/pricing",
+    "formats": ["markdown"],
+    "onlyMainContent": true,
+    "waitFor": 2000
+  }
+}
+```
+
+### Deep autonomous research (when URLs are unknown)
+
+When you don't know which pages hold the data, use the async agent. Poll `firecrawl_agent_status` until complete.
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_agent",
+  "arguments": {
+    "prompt": "Find Restaurant365's published pricing tiers across their site and pull feature lists for each tier",
+    "urls": ["https://restaurant365.com"]
+  }
+}
+```
+
+## MCP Tools Used
+
+| Tool | Source skill | Notes |
 |------|--------------|-------|
-| `--urls <urls>` | `../firecrawl-agent` | Starting URLs for agent run |
-| `--schema-file <path>` | `../firecrawl-agent` | Path to JSON schema |
-| `--max-credits <n>` | `../firecrawl-agent` | Cap per-run credit spend |
-| `--wait` | `../firecrawl-agent`, `../firecrawl-crawl` | Block until complete |
-| `--only-main-content` | `../firecrawl-scrape` | Strip chrome / nav |
-| `--wait-for <ms>` | `../firecrawl-scrape` | Wait for JS-rendered content |
-| `-o, --output <path>` | all | Always stage under `.firecrawl/competitor-intel/` |
+| `mcp__firecrawl__firecrawl_extract` | `../firecrawl-agent` | Schema-driven extraction, fast |
+| `mcp__firecrawl__firecrawl_agent` + `_status` | `../firecrawl-agent` | Autonomous research, async |
+| `mcp__firecrawl__firecrawl_scrape` | `../firecrawl-scrape` | Single-page markdown or JSON |
+| `mcp__firecrawl__firecrawl_map` | `../firecrawl-map` | URL discovery before scrape |
+
+Always stage output under `.firecrawl/competitor-intel/` via the Write tool.
 
 ## Output Naming Convention
 
@@ -150,7 +225,12 @@ Examples:
 
 ## Cost
 
-Competitor intel runs can burn credits fast on multi-page extractions. Always pass `--max-credits`. Budget guidance and per-command cost table: `${CLAUDE_PLUGIN_ROOT}/skills/firecrawl-cli/rules/credit-budget.md`. If that rule file is missing, default caps: 500 credits per simple page, 1000 per agent run across <= 5 pages.
+Competitor intel runs can burn credits fast on multi-page extractions. Default caps:
+- Single scrape: ~1-5 credits
+- `firecrawl_extract` with schema: ~5-20 credits per URL
+- `firecrawl_agent` run: 100-1000+ credits (autonomous, open-ended)
+
+Check balance at `firecrawl.dev/app` before launching a `firecrawl_agent` job. Prefer `firecrawl_extract` with named URLs whenever possible — it is dramatically cheaper.
 
 ## Handoff to KB
 
@@ -162,10 +242,9 @@ Never call the Marketing Brain MCP directly from this skill. Ingestion is a sepa
 
 ## See Also
 
-- `../firecrawl-agent` — AI extraction engine used with schemas
-- `../firecrawl-scrape` — simpler single-page extraction (cheaper)
-- `../firecrawl-map` — discover case study index URLs
-- `../firecrawl-cli/rules/credit-budget.md` — cost guardrails
-- `../kb-ingest-review` — review-and-ingest stage after this skill
+- `../firecrawl-agent/SKILL.md` — `firecrawl_extract` (schema) and `firecrawl_agent` (autonomous)
+- `../firecrawl-scrape/SKILL.md` — single-page scrape (cheaper)
+- `../firecrawl-map/SKILL.md` — discover case study index URLs
+- `../kb-ingest-review/SKILL.md` — review-and-ingest stage after this skill
 - `${CLAUDE_PLUGIN_ROOT}/references/competitor-registry.md` — canonical competitor list + URLs
 - `${CLAUDE_PLUGIN_ROOT}/references/extraction-schemas/` — reusable JSON schemas

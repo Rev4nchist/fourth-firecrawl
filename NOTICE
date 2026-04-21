@@ -22,5 +22,11 @@ Substantial additions by Fourth AI Enablement Team:
 This plugin remains licensed under AGPL-3.0 in compliance
 with upstream licensing terms. See LICENSE for full text.
 
+v1.1.0 additionally depends on the Firecrawl MCP server
+(https://github.com/firecrawl/firecrawl-mcp-server, MIT license)
+accessed via hosted transport at https://mcp.firecrawl.dev/v2/mcp.
+Each user authenticates their own account — this plugin does not
+ship, proxy, or share API keys.
+
 See CHANGES-FROM-UPSTREAM.md for a tracked diff of additions
 and modifications relative to the upstream repository.

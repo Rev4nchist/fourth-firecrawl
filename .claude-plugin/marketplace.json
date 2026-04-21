@@ -7,13 +7,18 @@
     {
       "name": "fourth-firecrawl",
       "source": "./",
-      "description": "Fourth-tailored fork of the Firecrawl Claude plugin. Task-oriented skills for competitor intel, hospitality market scans, content gap analysis, and staged KB ingestion into Fourth Marketing Brain.",
+      "description": "Fourth-tailored fork of the Firecrawl Claude plugin, rebuilt MCP-first for Claude Cowork. Task-oriented skills for competitor intel, hospitality market scans, content gap analysis, and staged KB ingestion. Per-user keys via hosted Firecrawl MCP — no shared keys.",
       "skills": [
-        "./skills/firecrawl-cli",
         "./skills/competitor-intel",
         "./skills/market-scan",
         "./skills/content-gap-analysis",
-        "./skills/kb-ingest-review"
+        "./skills/kb-ingest-review",
+        "./skills/firecrawl-scrape",
+        "./skills/firecrawl-search",
+        "./skills/firecrawl-map",
+        "./skills/firecrawl-crawl",
+        "./skills/firecrawl-agent",
+        "./skills/firecrawl-interact"
       ]
     }
   ]

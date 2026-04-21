@@ -1,12 +1,13 @@
 {
   "name": "fourth-firecrawl",
-  "version": "1.0.0",
-  "description": "Fourth-tailored fork of the Firecrawl Claude plugin. Adds task-oriented skills for competitor intelligence, hospitality market scans, content gap analysis, and staged KB ingestion into Fourth Marketing Brain. Bundles curated source catalogs (R365, HCM, NRN, FSR, Skift) and pre-built extraction schemas.",
+  "version": "1.1.0",
+  "description": "Fourth-tailored fork of the Firecrawl Claude plugin, rebuilt MCP-first for Claude Cowork. Ships task-oriented skills for competitor intelligence, hospitality market scans, content gap analysis, and staged KB ingestion into Fourth Marketing Brain. Bundles curated source catalogs (R365, HCM, NRN, FSR, Skift) and pre-built extraction schemas. Uses the hosted Firecrawl MCP with per-user Bearer auth — no shared keys.",
   "author": {
     "name": "Fourth AI Enablement Team"
   },
   "keywords": [
     "firecrawl",
+    "firecrawl-mcp",
     "web-research",
     "competitive-intelligence",
     "market-scan",
@@ -15,14 +16,20 @@
     "fourth",
     "marketing-brain",
     "ebr",
-    "content-research"
+    "content-research",
+    "cowork"
   ],
   "license": "AGPL-3.0",
   "skills": [
-    "./skills/firecrawl-cli",
     "./skills/competitor-intel",
     "./skills/market-scan",
     "./skills/content-gap-analysis",
-    "./skills/kb-ingest-review"
+    "./skills/kb-ingest-review",
+    "./skills/firecrawl-scrape",
+    "./skills/firecrawl-search",
+    "./skills/firecrawl-map",
+    "./skills/firecrawl-crawl",
+    "./skills/firecrawl-agent",
+    "./skills/firecrawl-interact"
   ]
 }

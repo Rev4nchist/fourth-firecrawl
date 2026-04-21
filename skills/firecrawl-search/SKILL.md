@@ -1,59 +1,124 @@
 ---
 name: firecrawl-search
 description: |
-  Web search with full page content extraction. Use this skill whenever the user asks to search the web, find articles, research a topic, look something up, find recent news, discover sources, or says "search for", "find me", "look up", "what are people saying about", or "find articles about". Returns real search results with optional full-page markdown — not just snippets. Provides capabilities beyond Claude's built-in WebSearch.
+  Web search with optional full-page content extraction, via the hosted Firecrawl MCP. Use when users want to search the web, find articles, research a topic, look something up, find recent news, or discover sources — phrases like "search for", "find me", "look up", "what are people saying about", or "find articles about". Returns real search results with optional full-page markdown — not just snippets. Supports Google-style operators (site:, intitle:, -, quoted terms), time filters (past hour/day/week/month/year), and multi-source search (web/news/images). Provides capabilities beyond Claude's built-in WebSearch. Do NOT trigger for scraping a specific known URL (use firecrawl-scrape) or enumerating pages on a single site (use firecrawl-map).
 allowed-tools:
-  - Bash(firecrawl *)
-  - Bash(npx firecrawl *)
+  - mcp__firecrawl__firecrawl_search
+  - Read
+  - Write
+  - Bash(mkdir *)
 ---
 
-# firecrawl search
+# firecrawl-search
 
-Web search with optional content scraping. Returns search results as JSON, optionally with full page content.
+Web search via the hosted Firecrawl MCP. Returns search results with optional inline scrape of each result's full page.
 
-## When to use
+## Preflight
+
+If `mcp__firecrawl__firecrawl_search` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+
+## When to Use
 
 - You don't have a specific URL yet
 - You need to find pages, answer questions, or discover sources
-- First step in the [workflow escalation pattern](firecrawl-cli): search → scrape → map → crawl → interact
+- You want time-bounded news (past hour/day/week)
+- First step in the workflow escalation pattern: **search** → scrape → map → crawl → interact
 
-## Quick start
+## Quick Start
 
-```bash
-# Basic search
-firecrawl search "your query" -o .firecrawl/result.json --json
-
-# Search and scrape full page content from results
-firecrawl search "your query" --scrape -o .firecrawl/scraped.json --json
-
-# News from the past day
-firecrawl search "your query" --sources news --tbs qdr:d -o .firecrawl/news.json --json
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_search",
+  "arguments": {
+    "query": "restaurant365 pricing changes",
+    "limit": 10,
+    "tbs": "qdr:w",
+    "sources": [{ "type": "news" }]
+  }
+}
 ```
 
-## Options
+## Parameters
 
-| Option                               | Description                                   |
-| ------------------------------------ | --------------------------------------------- |
-| `--limit <n>`                        | Max number of results                         |
-| `--sources <web,images,news>`        | Source types to search                        |
-| `--categories <github,research,pdf>` | Filter by category                            |
-| `--tbs <qdr:h\|d\|w\|m\|y>`          | Time-based search filter                      |
-| `--location`                         | Location for search results                   |
-| `--country <code>`                   | Country code for search                       |
-| `--scrape`                           | Also scrape full page content for each result |
-| `--scrape-formats`                   | Formats when scraping (default: markdown)     |
-| `-o, --output <path>`                | Output file path                              |
-| `--json`                             | Output as JSON                                |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `query` | string (required, min 1 char) | Search query (supports `site:`, `intitle:`, `-`, quoted terms) |
+| `limit` | number | Results count; default is low (~5) to avoid timeouts |
+| `tbs` | string | Google time-based filter (`qdr:h\|d\|w\|m\|y`) |
+| `filter` | string | Additional search filter |
+| `location` | string | Geo context for search |
+| `sources` | array | Multi-source: `[{ type: "web" \| "news" \| "images" }]` |
+| `scrapeOptions` | object | Full scrape params — scrape each result inline |
+| `enterprise` | array | `default`, `anon`, or `zdr` (zero data retention) |
+
+## Time Filter Reference
+
+| `tbs` value | Window |
+|-------------|--------|
+| `qdr:h` | Past hour |
+| `qdr:d` | Past day |
+| `qdr:w` | Past week |
+| `qdr:m` | Past month |
+| `qdr:y` | Past year |
+
+## Examples
+
+### News from the past week
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_search",
+  "arguments": {
+    "query": "restaurant labor legislation 2026",
+    "limit": 15,
+    "tbs": "qdr:w",
+    "sources": [{ "type": "news" }]
+  }
+}
+```
+
+### Search + inline scrape (no follow-up scrape needed)
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_search",
+  "arguments": {
+    "query": "tipping compliance restaurants",
+    "limit": 10,
+    "tbs": "qdr:m",
+    "sources": [{ "type": "news" }],
+    "scrapeOptions": {
+      "formats": ["markdown"],
+      "onlyMainContent": true
+    }
+  }
+}
+```
+
+### Site-scoped search with Google operator
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_search",
+  "arguments": {
+    "query": "site:nrn.com ghost kitchens",
+    "limit": 20,
+    "tbs": "qdr:m"
+  }
+}
+```
 
 ## Tips
 
-- **`--scrape` fetches full content** — don't re-scrape URLs from search results. This saves credits and avoids redundant fetches.
-- Always write results to `.firecrawl/` with `-o` to avoid context window bloat.
-- Use `jq` to extract URLs or titles: `jq -r '.data.web[].url' .firecrawl/search.json`
-- Naming convention: `.firecrawl/search-{query}.json` or `.firecrawl/search-{query}-scraped.json`
+- **`scrapeOptions` fetches full content inline** — don't re-scrape URLs from search results. Saves credits.
+- **Always pass `tbs`** when recency matters. Unbounded searches surface stale pages.
+- **Use `site:`** to constrain to a specific trade press domain (e.g., `site:nrn.com`).
+- **Use `limit` generously but mind the budget.** 10 results with inline `scrapeOptions` burns ~50 credits; 30 burns ~150.
+- **`sources: [{ type: "news" }]`** is the news vertical (better for time-bounded sweeps). Default is `web`.
 
-## See also
+## See Also
 
-- [firecrawl-scrape](../firecrawl-scrape/SKILL.md) — scrape a specific URL
-- [firecrawl-map](../firecrawl-map/SKILL.md) — discover URLs within a site
-- [firecrawl-crawl](../firecrawl-crawl/SKILL.md) — bulk extract from a site
+- `../firecrawl-scrape/SKILL.md` — scrape a specific URL once you have it
+- `../firecrawl-map/SKILL.md` — enumerate URLs within a known site
+- `../firecrawl-crawl/SKILL.md` — bulk-extract from a site section
+- `../market-scan/SKILL.md` — Fourth-specific trade press sweep using this tool

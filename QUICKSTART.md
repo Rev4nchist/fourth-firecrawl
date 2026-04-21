@@ -2,17 +2,13 @@
 
 ## What this plugin does
 
-The fourth-firecrawl plugin connects Claude Code to the Firecrawl web-scraping platform and layers four task-oriented research skills on top of it: competitor intelligence, hospitality market scanning, content gap analysis, and staged KB ingestion. It gives Fourth team members a repeatable, credit-aware workflow for pulling competitor pricing, tracking industry news, and landing structured research directly into the Fourth Marketing Brain knowledge base.
-
-Underneath the Fourth-specific skills, the full Firecrawl CLI is available for ad-hoc scraping, crawling, mapping, and AI-powered structured extraction.
+The fourth-firecrawl plugin connects Claude to the Firecrawl web-scraping platform via a hosted MCP connector and layers four task-oriented research skills on top of it: competitor intelligence, hospitality market scanning, content gap analysis, and staged KB ingestion. It gives Fourth team members a repeatable, credit-aware workflow for pulling competitor pricing, tracking industry news, and landing structured research directly into the Fourth Marketing Brain knowledge base. All Firecrawl operations happen through MCP tool calls — no CLI installation required.
 
 ## Prerequisites
 
-- **Node.js and npm** installed (Node 18+). Verify: `node --version`
-- **Claude Code** running with the fourth-firecrawl plugin installed via Cowork organization plugins
-- **A Firecrawl account** — you will create one in the setup step below (free, no payment required)
-
-You do not need a Firecrawl account before installing the plugin. Setup handles that.
+- **A Firecrawl account** — free tier, 500 credits/month. You will create one during setup if you do not have one. Get a key at https://firecrawl.dev/app/api-keys.
+- **Claude Code** running with the fourth-firecrawl plugin installed (Cowork org plugin or Claude Code CLI plugin).
+- **No Node.js install required** — the plugin uses the hosted Firecrawl MCP at `https://mcp.firecrawl.dev/v2/mcp`. There is nothing to install locally.
 
 ## First-time setup
 
@@ -22,17 +18,11 @@ Run this slash command in Claude Code:
 /fourth-firecrawl:setup
 ```
 
-It will check your auth status, walk you through registering an API key if needed, authenticate the CLI, and verify the install with a test scrape.
+Setup checks whether the Firecrawl MCP tools are already in your available toolset. If they are, you are done. If not, it walks you through connecting your personal API key via the Cowork connector UI (Cowork users) or setting the `FIRECRAWL_API_KEY` environment variable (Claude Code CLI users).
 
-**Fourth does not issue Firecrawl keys. Each user registers their own free account — upgrade through Fourth AI Enablement Team if you exhaust the free tier.**
+**Fourth does not issue Firecrawl keys. Each user registers their own free account — upgrade through the Fourth AI Enablement Team if you exhaust the free tier.**
 
-If you see "command not found" when the setup tries to run `firecrawl`, install the CLI manually first:
-
-```bash
-npm install -g firecrawl-cli
-```
-
-Then re-run `/fourth-firecrawl:setup`.
+Full setup instructions, including both Cowork and Claude Code CLI paths, are at `commands/setup.md`.
 
 ## Your 5-minute first run
 
@@ -44,7 +34,7 @@ After setup completes, try these three prompts directly in Claude Code. Each one
 
 **What happens:**
 - The `competitor-intel` skill activates
-- Claude maps restaurant365.com, extracts pricing page content using the bundled `pricing-page.json` schema
+- Claude calls `mcp__firecrawl__firecrawl_extract` with the bundled `pricing-page.json` schema against the R365 pricing page
 - Output is staged at `.firecrawl/competitor-intel/r365-pricing-YYYYMMDD.json`
 - Claude summarizes findings and offers to ingest to the Marketing Brain KB
 
@@ -56,7 +46,7 @@ After setup completes, try these three prompts directly in Claude Code. Each one
 
 **What happens:**
 - The `market-scan` skill activates
-- Claude searches across NRN, FSR Magazine, Restaurant Dive, and QSR Magazine for tipping-related coverage from the past 7 days
+- Claude calls `mcp__firecrawl__firecrawl_search` with `tbs: "qdr:w"` and `sources: [{ "type": "news" }]` across NRN, FSR Magazine, Restaurant Dive, and QSR Magazine
 - Results are staged at `.firecrawl/market-scan/`
 - Claude produces a Fourth-voice summary with source attribution
 
@@ -76,93 +66,67 @@ After setup completes, try these three prompts directly in Claude Code. Each one
 
 ## Routing cheat sheet
 
-| Need to... | Use skill | Example prompt |
-|------------|-----------|----------------|
-| Research a specific competitor | `competitor-intel` | "Pull Deputy pricing and feature list" |
-| Track hospitality industry news | `market-scan` | "What's new in hotel workforce tech this week?" |
+| Need to... | Skill | Example prompt |
+|------------|-------|----------------|
+| Research a specific competitor's pricing or features | `competitor-intel` | "Pull Deputy pricing and feature list" |
+| Track hospitality industry news or trends | `market-scan` | "What's new in hotel workforce tech this week?" |
 | Find content gaps vs. competitors | `content-gap-analysis` | "What topics are 7shifts covering that Fourth isn't?" |
-| Land research into the KB | `kb-ingest-review` | "Ingest the staged competitor files to the marketing brain" |
+| Land staged research into the Marketing Brain KB | `kb-ingest-review` | "Ingest the staged competitor files to the marketing brain" |
+| Scrape a single URL ad-hoc | `firecrawl-scrape` | "Scrape https://competitor.com/pricing as markdown" |
+| Discover all URLs on a site | `firecrawl-map` | "Map the Toast website and filter for pricing pages" |
+| Crawl a site section in bulk | `firecrawl-crawl` | "Crawl all blog posts on restaurant365.com/blog" |
+| Extract structured data from known URLs | `firecrawl-agent` (extract mode) | "Extract pricing tiers from these 3 URLs with this schema" |
+| Autonomous deep research across unknown sources | `firecrawl-agent` (agent mode) | "Research what competitors say about tipping compliance" |
 
-For edge cases — single-URL fetches, deep site crawls, form-submission scraping — the base Firecrawl skills (`firecrawl-scrape`, `firecrawl-crawl`, `firecrawl-map`, `firecrawl-agent`, `firecrawl-search`) are also available. Ask Claude to "scrape this URL" or "crawl this site" directly.
-
-See `references/routing.md` for the full decision table including fail-stop rules.
+For the full decision table including edge cases, see `references/routing.md`.
 
 ## Credit budget basics
 
 Each Firecrawl account on the free tier gets 500 credits per month. Credits are per user — there is no shared pool across the team.
 
-**Check your remaining credits:**
-
-```bash
-firecrawl --status
-```
-
-Look for "Credits: N remaining" in the output.
+**Check your remaining balance** at https://firecrawl.dev/app (dashboard, top right). The Firecrawl MCP does not expose a credit-check tool — the dashboard is the only way to see your balance.
 
 **Typical operation costs:**
 
-| Operation | Approximate credit cost |
-|-----------|------------------------|
-| Single page scrape | 1 credit |
-| `firecrawl search` (10 results) | 10-20 credits |
-| `firecrawl map` (50 URLs) | 5-10 credits |
-| `firecrawl crawl` (20 pages) | 20-40 credits |
-| `firecrawl agent` run | 50-500 credits depending on scope |
+| Operation | Approximate cost |
+|-----------|-----------------|
+| `firecrawl_scrape` — single page | ~1 credit |
+| `firecrawl_search` — 10 results, no per-result scrape | ~10 credits |
+| `firecrawl_map` — 50 URLs | ~5 credits |
+| `firecrawl_crawl` — 20 pages | ~20-40 credits |
+| `firecrawl_extract` — 1-3 URLs with schema | ~5-15 credits |
+| `firecrawl_agent` run — autonomous, varies by scope | 50-500 credits |
 
-The credit-budget rule file (`skills/firecrawl-cli/rules/credit-budget.md`) specifies the default caps the skills apply automatically. For agent runs that would exceed 25% of your remaining credits, the skill will ask for confirmation before proceeding.
+The skills apply automatic caps: crawls default to `limit: 100`, agent runs cap at `maxCredits: 500`. For any operation estimated to burn more than 125 credits (25% of the free monthly quota), the skill will ask for confirmation before proceeding.
 
-If you regularly hit the 500-credit ceiling, contact the Fourth AI Enablement Team. Paid-tier upgrades are handled case-by-case — Fourth does not subsidize individual accounts by default.
+Full per-tool guidance is at `references/credit-budget.md`.
 
 ## Troubleshooting
 
-**"firecrawl: command not found"**
+**"MCP not connected" or Firecrawl tools not available**
 
-The CLI is not installed or not on your PATH.
+The `mcp__firecrawl__*` tools are missing from Claude's toolset. Re-run `/fourth-firecrawl:setup` and follow the Step 3 instructions to connect the Firecrawl MCP connector.
 
-```bash
-npm install -g firecrawl-cli
-```
+- Cowork: verify the Firecrawl entry appears in Settings → Connectors with a connected status.
+- Claude Code CLI: confirm `echo $FIRECRAWL_API_KEY` returns your key in the shell where Claude Code is running.
 
-If npm global installs are not on PATH, add the npm bin directory:
+**"Invalid API key" or 401 responses from the MCP**
 
-```bash
-# macOS / Linux — add to ~/.zshrc or ~/.bashrc
-export PATH="$(npm bin -g):$PATH"
-```
+Your key may have been regenerated or entered with a typo. Go to https://firecrawl.dev/app/api-keys, create a new key, and update it in Cowork connector settings or your shell environment. Re-run `/fourth-firecrawl:setup` Step 4 to verify.
 
-**"Not authenticated" or "Invalid API key"**
+**Credits exhausted mid-task**
 
-Re-run setup:
-
-```
-/fourth-firecrawl:setup
-```
-
-Or re-authenticate directly:
-
-```bash
-firecrawl login --browser
-```
-
-**"Rate limited" or credits exhausted mid-task**
-
-Check your balance:
-
-```bash
-firecrawl --status
-```
-
-If credits are at zero, the CLI will refuse new requests until the monthly cycle resets or you upgrade. Contact the Fourth AI Enablement Team if this is blocking active work.
+The Firecrawl API returns a 402 or quota-exceeded error. Check your balance at https://firecrawl.dev/app. If credits are at zero, the MCP will refuse new requests until the monthly cycle resets or you upgrade. Contact the Fourth AI Enablement Team if this is blocking active work.
 
 **Skill not triggering automatically**
 
 The skills use natural-language triggers. If auto-detection misses your intent, name the skill explicitly: "Use the competitor-intel skill to research HotSchedules pricing."
 
-**Output files not appearing**
+**Output files not appearing in `.firecrawl/`**
 
-The skills write to `.firecrawl/` in your current working directory. Make sure Claude Code is open in the correct project directory. Verify with `ls .firecrawl/` after a run.
+Make sure Claude Code is open in the correct project directory. Verify with `ls .firecrawl/` after a run. The `.firecrawl/` directory is created by the first skill run if it does not exist.
 
-## Where does output go?
+## Output location
 
 All staged research lands in `.firecrawl/` subdirectories:
 
@@ -171,15 +135,14 @@ All staged research lands in `.firecrawl/` subdirectories:
   competitor-intel/    <- competitor-intel skill output
   market-scan/         <- market-scan skill output
   content-gap/         <- content-gap-analysis skill output
-  install-check.md     <- written during setup verification
 ```
 
-These files are gitignored by default (the plugin ships a `.gitignore` entry for `.firecrawl/`). They are staging only — content moves to the Fourth Marketing Brain KB via the `kb-ingest-review` skill after your review.
+These files are gitignored by default. They are staging only — content moves to the Fourth Marketing Brain KB via the `kb-ingest-review` skill after your review and confirmation.
 
-KB ingestion lands content under the folder structure you confirm during the ingest step (e.g., `competitive/r365/`, `market-signals/tipping/`).
+KB ingestion lands content under the folder structure you confirm during the ingest step (for example, `competitive/r365/` or `market-signals/tipping/`).
 
 ## Getting help
 
 For plugin issues, questions about credit upgrades, or onboarding support, reach out to the Fourth AI Enablement Team at [#ai-enablement] in your team's Slack workspace.
 
-For Firecrawl CLI bugs or API issues (rate limits, auth failures that persist after re-login), check the [Firecrawl docs](https://docs.firecrawl.dev) or their [GitHub issues](https://github.com/mendableai/firecrawl/issues).
+For Firecrawl MCP or API issues (rate limits, persistent auth failures), check the [Firecrawl docs](https://docs.firecrawl.dev) or the [firecrawl-mcp-server GitHub repo](https://github.com/firecrawl/firecrawl-mcp-server/issues).

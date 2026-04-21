@@ -1,24 +1,17 @@
 ---
 name: content-gap-analysis
 description: |
-  Identify content angles competitors are covering that Fourth's Marketing Brain KB is not. Produces a three-way comparison (competitor content topics vs. Fourth KB coverage vs. proposed new angles) that feeds the content roadmap. Use this skill when the user says "what content are competitors publishing that we're not", "find content gaps vs R365", "topic coverage analysis", "where's our blog thin compared to 7shifts", "content gap report for Deputy", "what are competitors writing about that we should", or "compare our KB to competitor resources". Do NOT trigger for simple competitor page scraping (use competitor-intel), one-off KB searches (use the fourth-marketing-brain MCP directly), or general market research (use market-scan).
+  Identify content angles competitors are covering that Fourth's Marketing Brain KB is not. Produces a three-way comparison (competitor content topics vs. Fourth KB coverage vs. proposed new angles) that feeds the content roadmap. Use when users request content-gap analysis — phrases like "what content are competitors publishing that we're not", "find content gaps vs R365", "topic coverage analysis", "where's our blog thin compared to 7shifts", "content gap report for Deputy", "what are competitors writing about that we should", "compare our KB to competitor resources", "content roadmap opportunities", or "find topics competitors cover better". Do NOT trigger for simple competitor page scraping (use competitor-intel), one-off KB searches (use the fourth-marketing-brain MCP directly), or general market research (use market-scan).
 allowed-tools:
-  - Bash(firecrawl *)
-  - Bash(npx firecrawl *)
+  - mcp__firecrawl__firecrawl_map
+  - mcp__firecrawl__firecrawl_scrape
+  - mcp__firecrawl__firecrawl_extract
+  - mcp__firecrawl__firecrawl_agent
+  - mcp__firecrawl__firecrawl_agent_status
   - Bash(mkdir *)
   - Bash(date *)
   - Read
   - Write
-triggers:
-  - what content are competitors publishing that we are not
-  - find content gaps vs [competitor]
-  - topic coverage analysis
-  - content gap report for [competitor]
-  - where is our blog thin compared to [competitor]
-  - compare our KB to competitor resources
-  - content roadmap opportunities
-  - find topics competitors cover better
-version: 1.0.0
 ---
 
 # Content Gap Analysis
@@ -47,16 +40,16 @@ Three-way comparison that surfaces content angles Fourth should publish. Competi
 
 ## Prerequisites
 
-1. Firecrawl CLI authenticated: `firecrawl --status`.
+1. Firecrawl MCP must be connected — if `mcp__firecrawl__firecrawl_map` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
 2. Competitor registry for blog/resource URLs:
    - `${CLAUDE_PLUGIN_ROOT}/references/competitor-registry.md`
 3. Fourth Marketing Brain MCP access — ideally the `fourth-marketing-brain` MCP is registered with `search_documents` available. If not registered in the current session, the skill will prompt the user to run KB searches manually.
-4. Credit budget awareness — see `${CLAUDE_PLUGIN_ROOT}/skills/firecrawl-cli/rules/credit-budget.md`.
+4. Credit budget awareness — see Cost section below.
 
 ## Workflow
 
 1. **Scope** -> identify the competitor(s) and topic domain (scheduling, labor forecasting, tip pooling, HR, etc.).
-2. **Enumerate competitor content** -> `firecrawl map` on their blog / resources root, then `firecrawl scrape` titles + summaries for top N.
+2. **Enumerate competitor content** -> `mcp__firecrawl__firecrawl_map` on their blog / resources root, then `mcp__firecrawl__firecrawl_scrape` titles + summaries for top N.
 3. **Query Fourth KB** -> use `mcp__fourth-marketing-brain__search_documents` (if available) with the same topic terms.
 4. **Compute the delta** -> topics the competitor covers that Fourth does not.
 5. **Propose angles** -> for each gap, write a Fourth-voice angle that differentiates instead of imitating.
@@ -65,35 +58,94 @@ Three-way comparison that surfaces content angles Fourth should publish. Competi
 
 ## Examples
 
-### Step 1: Map competitor blog/resources
+First, stage the output directory:
 
 ```bash
 mkdir -p .firecrawl/content-gaps
-firecrawl map "https://restaurant365.com/blog" --limit 200 --json \
-  -o ".firecrawl/content-gaps/r365-blog-urls.json"
-
-firecrawl map "https://restaurant365.com/resources" --limit 100 --json \
-  -o ".firecrawl/content-gaps/r365-resources-urls.json"
 ```
 
-### Step 2: Batch-scrape titles and metadata
+### Step 1: Map competitor blog/resources
 
-```bash
-# Scrape a curated set of top post URLs — pull from the map output
-firecrawl scrape \
-  "https://restaurant365.com/blog/labor-forecasting" \
-  "https://restaurant365.com/blog/food-cost-control" \
-  "https://restaurant365.com/blog/restaurant-scheduling" \
-  --only-main-content
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_map",
+  "arguments": {
+    "url": "https://restaurant365.com/blog",
+    "limit": 200
+  }
+}
 ```
 
-### Step 3: Cluster titles with firecrawl agent
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_map",
+  "arguments": {
+    "url": "https://restaurant365.com/resources",
+    "limit": 100
+  }
+}
+```
 
-```bash
-firecrawl agent "cluster these blog post URLs by topic and return a topic taxonomy with counts" \
-  --urls "https://restaurant365.com/blog" \
-  --wait --max-credits 1000 \
-  -o ".firecrawl/content-gaps/r365-topic-taxonomy-$(date +%Y%m%d).json"
+Write each response to `.firecrawl/content-gaps/r365-blog-urls.json` and `...resources-urls.json`.
+
+### Step 2: Scrape titles and metadata (repeat for each URL)
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_scrape",
+  "arguments": {
+    "url": "https://restaurant365.com/blog/labor-forecasting",
+    "formats": ["markdown"],
+    "onlyMainContent": true
+  }
+}
+```
+
+### Step 3: Cluster titles with firecrawl_extract (cheaper than agent)
+
+When you have the URL list from Step 1, use `firecrawl_extract` with a taxonomy schema across all URLs:
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_extract",
+  "arguments": {
+    "urls": [
+      "https://restaurant365.com/blog/labor-forecasting",
+      "https://restaurant365.com/blog/food-cost-control",
+      "https://restaurant365.com/blog/restaurant-scheduling"
+    ],
+    "prompt": "Return topic, category, and 3-sentence summary for each post",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "posts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": { "type": "string" },
+              "topic": { "type": "string" },
+              "category": { "type": "string" },
+              "summary": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Alternative: open-ended cluster with the autonomous agent (slower, more expensive — poll `firecrawl_agent_status`):
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_agent",
+  "arguments": {
+    "prompt": "Cluster the blog posts at this site by topic and return a topic taxonomy with post counts per topic",
+    "urls": ["https://restaurant365.com/blog"]
+  }
+}
 ```
 
 ### Step 4: Query the Fourth KB (if MCP is registered)
@@ -149,18 +201,16 @@ Output `.firecrawl/content-gaps/<competitor>-gaps-<YYYYMMDD>.md`:
 <List of competitor URLs scraped>
 ```
 
-## Options Used
+## MCP Tools Used
 
-| Flag | Source skill | Notes |
+| Tool | Source skill | Notes |
 |------|--------------|-------|
-| `--limit <n>` | `../firecrawl-map` | Cap URLs returned (stay under budget) |
-| `--search <q>` | `../firecrawl-map` | Pre-filter by topic keyword |
-| `--json` | `../firecrawl-map`, `../firecrawl-search` | Needed for jq extraction of URLs |
-| `--only-main-content` | `../firecrawl-scrape` | Cleaner titles + intros |
-| `--urls <urls>` | `../firecrawl-agent` | Seed agent with blog roots |
-| `--max-credits <n>` | `../firecrawl-agent` | Required — gap analysis can runaway |
-| `--wait` | `../firecrawl-agent` | Block for inline results |
-| `-o, --output <path>` | all | Stage under `.firecrawl/content-gaps/` |
+| `mcp__firecrawl__firecrawl_map` | `../firecrawl-map` | Enumerate competitor content URLs |
+| `mcp__firecrawl__firecrawl_scrape` | `../firecrawl-scrape` | Grab titles and summaries |
+| `mcp__firecrawl__firecrawl_extract` | `../firecrawl-agent` | Schema-driven clustering (preferred) |
+| `mcp__firecrawl__firecrawl_agent` + `_status` | `../firecrawl-agent` | Autonomous clustering (fallback) |
+
+Stage all output under `.firecrawl/content-gaps/` via the Write tool.
 
 ## Output Naming
 
@@ -172,7 +222,7 @@ Output `.firecrawl/content-gaps/<competitor>-gaps-<YYYYMMDD>.md`:
 
 ## Cost
 
-Gap analysis is the most expensive skill in this plugin because it combines `map` (cheap), bulk `scrape` (moderate), and `agent` (expensive). Typical run: 800-2000 credits per competitor. Always cap `--max-credits` on agent calls. See `${CLAUDE_PLUGIN_ROOT}/skills/firecrawl-cli/rules/credit-budget.md` for budget guidance.
+Gap analysis is the most expensive skill in this plugin because it combines `firecrawl_map` (cheap, ~1 credit), bulk `firecrawl_scrape` (moderate, ~1-5 credits per page), and `firecrawl_extract` or `firecrawl_agent` (expensive, 5-1000+ credits). Typical run: 800-2000 credits per competitor. Prefer `firecrawl_extract` with a named URL list over `firecrawl_agent` for open-ended clustering — dramatically cheaper. Check balance at `firecrawl.dev/app` before starting.
 
 ## Three-Way Comparison Notes
 
@@ -185,11 +235,10 @@ Never propose angles that are mirror-images of competitor posts. Fourth's voice 
 
 ## See Also
 
-- `../firecrawl-map` — enumerate competitor content URLs
-- `../firecrawl-scrape` — grab titles and summaries
-- `../firecrawl-agent` — cluster by topic with AI
-- `../competitor-intel` — run before this for structured competitor data
-- `../market-scan` — complementary industry context
-- `../kb-ingest-review` — push competitor reference material to KB
+- `../firecrawl-map/SKILL.md` — enumerate competitor content URLs
+- `../firecrawl-scrape/SKILL.md` — grab titles and summaries
+- `../firecrawl-agent/SKILL.md` — `firecrawl_extract` (schema) and `firecrawl_agent` (autonomous)
+- `../competitor-intel/SKILL.md` — run before this for structured competitor data
+- `../market-scan/SKILL.md` — complementary industry context
+- `../kb-ingest-review/SKILL.md` — push competitor reference material to KB
 - `${CLAUDE_PLUGIN_ROOT}/references/competitor-registry.md` — blog / resources URLs
-- `../firecrawl-cli/rules/credit-budget.md` — cost guardrails

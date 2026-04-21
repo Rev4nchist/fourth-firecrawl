@@ -1,25 +1,15 @@
 ---
 name: market-scan
 description: |
-  Sweep Fourth's curated hospitality trade press for industry news, trends, and signals. Feeds both EBR builds (Phase 1.5 benchmarking context) and marketing research. Use this skill when the user says "scan hospitality news for Q1 2026 trends", "what's happening in restaurant labor news", "industry signals on tipping legislation", "what's the trade press saying about AI in restaurants", "market scan for hotel tech", "grab the latest NRN headlines", "what are restaurant operators worrying about this month", or any request for a time-bounded hospitality-industry news sweep. Queries curated sources (NRN, FSR, Skift, Hotel News Now, Nation's Restaurant News, Restaurant Business, AHLA, National Restaurant Association) and summarizes in Fourth voice. Do NOT trigger for general web search (use firecrawl-search), competitor-specific research (use competitor-intel), or customer-specific research (use ebr-research).
+  Sweep Fourth's curated hospitality trade press for industry news, trends, and signals. Feeds both EBR builds (Phase 1.5 benchmarking context) and marketing research. Use when users request a time-bounded hospitality-industry news sweep — phrases like "scan hospitality news for Q1 2026 trends", "what's happening in restaurant labor news", "industry signals on tipping legislation", "what's the trade press saying about AI in restaurants", "market scan for hotel tech", "grab the latest NRN headlines", "what are restaurant operators worrying about this month", "trade press sweep on [topic]", "hospitality trends this quarter", or "scan NRN for [topic]". Queries curated sources (NRN, FSR, Skift, Hotel News Now, Nation's Restaurant News, Restaurant Business, AHLA, National Restaurant Association) and summarizes in Fourth voice. Do NOT trigger for general web search (use firecrawl-search), competitor-specific research (use competitor-intel), or customer-specific research (use ebr-research).
 allowed-tools:
-  - Bash(firecrawl *)
-  - Bash(npx firecrawl *)
+  - mcp__firecrawl__firecrawl_search
+  - mcp__firecrawl__firecrawl_scrape
+  - mcp__firecrawl__firecrawl_map
   - Bash(mkdir *)
   - Bash(date *)
   - Read
   - Write
-triggers:
-  - scan hospitality news
-  - what is happening in restaurant labor news
-  - industry signals on [topic]
-  - market scan for [segment]
-  - trade press sweep on [topic]
-  - hospitality trends this quarter
-  - restaurant technology news roundup
-  - latest hotel tech industry news
-  - scan NRN for [topic]
-version: 1.0.0
 ---
 
 # Market Scan
@@ -48,100 +38,133 @@ Time-bounded sweep of curated hospitality trade press. Produces a dated markdown
 
 ## Prerequisites
 
-1. Firecrawl CLI authenticated: `firecrawl --status` (see `../firecrawl-cli/rules/install.md` if not).
+1. Firecrawl MCP must be connected — if `mcp__firecrawl__firecrawl_search` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
 2. Source catalog:
    - `${CLAUDE_PLUGIN_ROOT}/references/hospitality-sources.md` — canonical list of NRN, FSR, Skift, Hotel News Now, Restaurant Business, NRA, AHLA, Restaurant Dive, etc.
 3. Voice guide (optional but preferred for write-up):
    - `${CLAUDE_PLUGIN_ROOT}/references/fourth-voice-guide.md`
-4. Credit budget awareness — see `${CLAUDE_PLUGIN_ROOT}/skills/firecrawl-cli/rules/credit-budget.md`.
+4. Credit budget awareness — see Cost section below.
 
 ## Workflow
 
 1. **Clarify scope** -> topic + segment + time window (past week? past month? past quarter?).
-2. **Pick sources** -> read `references/hospitality-sources.md`, select 3-6 relevant domains.
+2. **Pick sources** -> read `${CLAUDE_PLUGIN_ROOT}/references/hospitality-sources.md`, select 3-6 relevant domains.
 3. **Stage output directory** -> `mkdir -p .firecrawl/market-scan`.
-4. **Run search or map+scrape** -> prefer `firecrawl search` with `--sources news` and `--tbs` time filters.
-5. **Write the brief** -> dated markdown file with source attribution table + Fourth-voice summary.
+4. **Run search or map+scrape** -> prefer `mcp__firecrawl__firecrawl_search` with `sources: [{ "type": "news" }]` and `tbs` time filters.
+5. **Write the brief** -> dated markdown file with source attribution table + Fourth-voice summary via the Write tool.
 6. **Next step:** suggest `kb-ingest-review` if the sweep has reusable insights for the KB under `messaging/` or `competitive/` folders.
 
 ## Examples
 
-### News sweep, past week, general topic
+First, stage the output directory:
 
 ```bash
 mkdir -p .firecrawl/market-scan
-firecrawl search "restaurant labor legislation 2026" \
-  --sources news --tbs qdr:w --limit 15 --scrape \
-  -o ".firecrawl/market-scan/labor-legislation-$(date +%Y%m%d).json" \
-  --json
 ```
+
+### News sweep, past week, general topic (search + inline scrape)
+
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_search",
+  "arguments": {
+    "query": "restaurant labor legislation 2026",
+    "sources": [{ "type": "news" }],
+    "tbs": "qdr:w",
+    "limit": 15,
+    "scrapeOptions": {
+      "formats": ["markdown"],
+      "onlyMainContent": true
+    }
+  }
+}
+```
+
+Then Write the returned JSON to `.firecrawl/market-scan/labor-legislation-<YYYYMMDD>.json`.
 
 ### Constrained to a specific trade press domain
 
-```bash
-firecrawl search "site:nrn.com tipping" \
-  --sources news --tbs qdr:m --limit 20 --scrape \
-  -o ".firecrawl/market-scan/nrn-tipping-$(date +%Y%m%d).json" \
-  --json
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_search",
+  "arguments": {
+    "query": "site:nrn.com tipping",
+    "sources": [{ "type": "news" }],
+    "tbs": "qdr:m",
+    "limit": 20,
+    "scrapeOptions": {
+      "formats": ["markdown"],
+      "onlyMainContent": true
+    }
+  }
+}
 ```
 
 ### Map + scrape for a known trade site's coverage
 
-```bash
-# 1. Find recent coverage pages
-firecrawl map "https://www.nrn.com" --search "AI in restaurants" --limit 30 \
-  --json -o ".firecrawl/market-scan/nrn-ai-urls.json"
+Step 1 — find recent coverage pages:
 
-# 2. Batch-scrape top results
-firecrawl scrape \
-  "https://www.nrn.com/technology/article-one" \
-  "https://www.nrn.com/technology/article-two" \
-  --only-main-content
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_map",
+  "arguments": {
+    "url": "https://www.nrn.com",
+    "search": "AI in restaurants",
+    "limit": 30
+  }
+}
 ```
 
-### Parallel sweep across 3 sources
+Step 2 — scrape a chosen article (repeat for each URL):
 
-```bash
-firecrawl search "ghost kitchens" --sources news --tbs qdr:m --limit 10 \
-  -o ".firecrawl/market-scan/ghost-kitchens-news.json" --json &
-firecrawl search "hotel labor shortage" --sources news --tbs qdr:m --limit 10 \
-  -o ".firecrawl/market-scan/hotel-labor-news.json" --json &
-firecrawl search "restaurant tipping" --sources news --tbs qdr:w --limit 10 \
-  -o ".firecrawl/market-scan/tipping-news.json" --json &
-wait
+```json
+{
+  "name": "mcp__firecrawl__firecrawl_scrape",
+  "arguments": {
+    "url": "https://www.nrn.com/technology/article-one",
+    "formats": ["markdown"],
+    "onlyMainContent": true
+  }
+}
 ```
 
-Respect the concurrency limit shown in `firecrawl --status`.
+### Sweep across multiple topics
 
-## Time-Window Flags
+Run `mcp__firecrawl__firecrawl_search` once per topic in sequence (the MCP handles concurrency server-side). Example topics:
 
-`--tbs` controls the recency window for `firecrawl search`:
+- `ghost kitchens` / `qdr:m`
+- `hotel labor shortage` / `qdr:m`
+- `restaurant tipping` / `qdr:w`
 
-| Flag | Window |
-|------|--------|
-| `--tbs qdr:h` | Past hour |
-| `--tbs qdr:d` | Past day |
-| `--tbs qdr:w` | Past week |
-| `--tbs qdr:m` | Past month |
-| `--tbs qdr:y` | Past year |
+Each call returns JSON; Write each result to `.firecrawl/market-scan/<topic>-<YYYYMMDD>.json`.
 
-Default is unbounded — always pass `--tbs` for market scans so you don't surface stale content.
+## Time-Window Values
+
+The `tbs` parameter on `firecrawl_search` controls the recency window:
+
+| `tbs` value | Window |
+|-------------|--------|
+| `qdr:h` | Past hour |
+| `qdr:d` | Past day |
+| `qdr:w` | Past week |
+| `qdr:m` | Past month |
+| `qdr:y` | Past year |
+
+Default is unbounded — always pass `tbs` for market scans so you don't surface stale content.
 
 ## Source Filtering
 
-`--sources <web,images,news>` narrows search to news vertical. For hospitality trade press, combine with `site:` operators in the query string when you need to pin one domain (see examples).
+The `sources` parameter (array of `{ type: "web" | "news" | "images" }`) narrows search to a vertical. For hospitality trade press, combine `[{ "type": "news" }]` with `site:` operators in the query string when you need to pin one domain (see examples).
 
-## Options Used
+## MCP Tools Used
 
-| Flag | Source skill | Notes |
+| Tool | Source skill | Notes |
 |------|--------------|-------|
-| `--sources news` | `../firecrawl-search` | News vertical |
-| `--tbs <qdr:d\|w\|m>` | `../firecrawl-search` | Time window |
-| `--scrape` | `../firecrawl-search` | Grab full page content in-line |
-| `--limit <n>` | `../firecrawl-search` | Cap results — mind the budget |
-| `--search <q>` | `../firecrawl-map` | Filter URLs when mapping a specific site |
-| `--only-main-content` | `../firecrawl-scrape` | Strip nav / chrome |
-| `-o, --output <path>` | all | Stage under `.firecrawl/market-scan/` |
+| `mcp__firecrawl__firecrawl_search` | `../firecrawl-search` | News + time-filtered search; inline scrape via `scrapeOptions` |
+| `mcp__firecrawl__firecrawl_map` | `../firecrawl-map` | Pin to a single trade-press domain |
+| `mcp__firecrawl__firecrawl_scrape` | `../firecrawl-scrape` | Fetch an individual article |
+
+Stage all output under `.firecrawl/market-scan/` via the Write tool.
 
 ## Output Format
 
@@ -173,14 +196,13 @@ Voice: use `${CLAUDE_PLUGIN_ROOT}/references/fourth-voice-guide.md` — concise,
 
 ## Cost
 
-News sweeps with `--scrape` on 15 results can approach ~150-300 credits. See `${CLAUDE_PLUGIN_ROOT}/skills/firecrawl-cli/rules/credit-budget.md`. Default guardrails: limit `--limit 10-20` for daily scans, cap `--limit 30` for monthly deep dives, always use `--tbs` to scope.
+News sweeps with inline `scrapeOptions` on 15 results can approach ~150-300 credits. Default guardrails: `limit: 10-20` for daily scans, cap `limit: 30` for monthly deep dives, always pass `tbs` to scope. Check balance at `firecrawl.dev/app`.
 
 ## See Also
 
-- `../firecrawl-search` — underlying search engine with `--tbs` and `--sources`
-- `../firecrawl-map` — alternative when targeting a single known domain
-- `../firecrawl-scrape` — fetch individual articles after finding them
-- `../firecrawl-cli/rules/credit-budget.md` — cost guardrails
-- `../kb-ingest-review` — push approved signals to Marketing Brain KB
+- `../firecrawl-search/SKILL.md` — underlying search tool with `tbs` and `sources`
+- `../firecrawl-map/SKILL.md` — alternative when targeting a single known domain
+- `../firecrawl-scrape/SKILL.md` — fetch individual articles after finding them
+- `../kb-ingest-review/SKILL.md` — push approved signals to Marketing Brain KB
 - `${CLAUDE_PLUGIN_ROOT}/references/hospitality-sources.md` — curated source list
 - `${CLAUDE_PLUGIN_ROOT}/references/fourth-voice-guide.md` — voice/tone reference

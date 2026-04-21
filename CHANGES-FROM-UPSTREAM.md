@@ -72,3 +72,41 @@ If upstream ships meaningful changes (new CLI subcommands, bug fixes to `firecra
 3. Diff upstream `main` against `skills/firecrawl-*/SKILL.md` files (the preserved set)
 4. Cherry-pick relevant changes; our custom skills and references stay untouched
 5. Update this file with new divergence notes
+
+---
+
+## v1.1.0 — MCP pivot (2026-04-21)
+
+### Why
+
+Cowork sandbox blocks `npm install -g` and arbitrary HTTPS from bash. The v1.0 CLI-based auth model was dead in Cowork. Pivoted to the hosted Firecrawl MCP at https://mcp.firecrawl.dev/v2/mcp with per-user Bearer auth.
+
+### Deleted
+
+- `skills/firecrawl-cli/` (entire directory — CLI umbrella skill plus `rules/install.md`, `rules/security.md`, `rules/credit-budget.md`)
+- `skills/firecrawl-download/` (CLI-only; no MCP equivalent)
+
+### Renamed
+
+- `skills/firecrawl-instruct/` → `skills/firecrawl-interact/` (matches MCP tool naming: `firecrawl_interact`)
+
+### Added
+
+- `.mcp.json` at plugin root (Firecrawl MCP connector declaration — `type: http`, hosted URL, `${FIRECRAWL_API_KEY}` env interpolation)
+- `PROJECT-DESCRIPTION.md` and `PROJECT-INSTRUCTIONS.md` (Cowork and Claude.ai project config)
+- `references/credit-budget.md` (relocated from `skills/firecrawl-cli/rules/credit-budget.md`, rewritten for MCP context)
+- `references/firecrawl-mcp-spec.md` (implementation reference: tool parameters, auth patterns, Cowork integration notes)
+- `docs/env-aware-setup-design.md` (design doc for the env-var-aware setup flow)
+
+### Rewritten
+
+- All 6 upstream primitive skills (`firecrawl-scrape`, `firecrawl-search`, `firecrawl-map`, `firecrawl-crawl`, `firecrawl-agent`, `firecrawl-interact`) now use MCP tool calls (`mcp__firecrawl__firecrawl_*`) instead of CLI bash commands
+- 4 Fourth-custom skills (`competitor-intel`, `market-scan`, `content-gap-analysis`, `kb-ingest-review`) now reference MCP tool names in examples
+- `commands/setup.md`: CLI install flow → MCP connector flow (check for `mcp__firecrawl__*` tools, configure Cowork connector or shell env var, test scrape via MCP)
+- `README.md`: CLI paths removed; MCP setup + per-user key guidance added; plugin structure tree updated
+- `QUICKSTART.md`: CLI paths replaced with MCP paths; `firecrawl --status` removed; credit balance guidance updated to dashboard-only
+- `references/routing.md`: fail-stop rule re-keyed on MCP tool availability (not `firecrawl --status`); routing table updated with MCP tool names
+
+### Re-sync strategy (updated)
+
+Upstream firecrawl-claude-plugin is still CLI-based. We are now deeply diverged — sync from upstream is unlikely to be useful. Track [firecrawl-mcp-server](https://github.com/firecrawl/firecrawl-mcp-server) for new MCP tool additions or parameter changes instead.
