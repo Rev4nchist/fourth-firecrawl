@@ -10,12 +10,22 @@ Competitors are grouped by category:
 
 Every competitor entry lists the known public pages and the JSON schema from `extraction-schemas/` to use when scraping each page type.
 
+## Public pricing flag
+
+Each competitor has a `public_pricing: true|false` field. It signals whether the vendor publishes real dollar amounts on their pricing page, or keeps pricing gated behind a demo/quote form.
+
+- `public_pricing: true` — real numbers are on the pricing page. Safe to scrape and extract tier/price data.
+- `public_pricing: false` — pricing is gated (quote-only or demo form required). **Skills should skip automated pricing extraction on these vendors** and reference captured Fourth sales data in the Marketing Brain KB (`competitive/<vendor>-pricing-*` docs, RFP responses, proposal archives) instead. Running `firecrawl_extract` against a gated pricing page wastes credits and returns empty arrays — this was the root cause of the v1.1.0 R365 empty-extract issue flagged in the 2026-04-21 test report.
+
+The flag is advisory only for non-pricing pages (features, case studies, press releases all remain scrapeable regardless).
+
 ---
 
 ## Restaurant365 (R365)
 
 - **Category:** all-in-one
 - **Primary URL:** https://www.restaurant365.com/
+- **public_pricing:** false (pricing is gated behind a demo form — skip automated pricing extraction; use captured Fourth proposals in the Marketing Brain KB)
 
 ### Known pages
 
@@ -45,6 +55,7 @@ Primary head-to-head competitor for Fourth in the restaurant vertical. Positions
 
 - **Category:** point-solution (scheduling-first, expanding into payroll)
 - **Primary URL:** https://www.7shifts.com/
+- **public_pricing:** true (tier prices and payroll add-on costs are published on the pricing page)
 
 ### Known pages
 
@@ -72,6 +83,7 @@ Claims 55,000+ quick and full-service restaurants. Free tier ($0 Comp plan) plus
 
 - **Category:** point-solution (POS-first, bundling payroll + scheduling)
 - **Primary URL:** https://pos.toasttab.com/
+- **public_pricing:** false (no public per-feature pricing page — requires sales contact; skip automated pricing extraction)
 
 ### Known pages
 
@@ -96,6 +108,7 @@ POS is their wedge; payroll + scheduling is a bolt-on. Threat vector: existing T
 
 - **Category:** point-solution (scheduling + time tracking)
 - **Primary URL:** https://www.deputy.com/
+- **public_pricing:** true (Lite / Core / Pro plan prices and add-on costs are published)
 
 ### Known pages
 
@@ -123,6 +136,7 @@ As of October 2025, Deputy introduced Lite / Core / Pro plans. Add-ons include A
 
 - **Category:** point-solution (scheduling-first)
 - **Primary URL:** https://wheniwork.com/
+- **public_pricing:** true (per-user monthly rates published on the pricing page — $2.50 single-location, $5 multi-location)
 
 ### Known pages
 
@@ -146,6 +160,7 @@ Starts at $2.50/user/month (single-location) and $5/user/month (multi-location).
 
 - **Category:** point-solution (scheduling + payroll for SMB)
 - **Primary URL:** https://www.joinhomebase.com/
+- **public_pricing:** true (Basic / Essentials / Plus / All-in-One tier prices and payroll add-on costs are published)
 
 ### Known pages
 
@@ -172,6 +187,7 @@ Free Basic plan up to 10 employees at one location. Paid tiers: Essentials, Plus
 
 - **Category:** all-in-one (narrower - payroll + scheduling + time)
 - **Primary URL:** https://www.pushoperations.com/
+- **public_pricing:** false (no public pricing page — requires sales contact; skip automated pricing extraction)
 
 ### Known pages
 
@@ -198,6 +214,7 @@ Canada-based, expanding in US. Payroll-first positioning with "run payroll in 10
 
 - **Category:** HCM
 - **Primary URL:** https://www.paycom.com/
+- **public_pricing:** false (no public per-seat pricing — requires sales contact; skip automated pricing extraction)
 
 ### Known pages
 
@@ -226,6 +243,7 @@ Horizontal HCM player. Heavy marketing emphasis on Beti (self-service payroll) a
 
 - **Category:** HCM (with hospitality vertical)
 - **Primary URL:** https://www.ukg.com/
+- **public_pricing:** false (no public pricing — requires sales contact; skip automated pricing extraction)
 
 ### Known pages
 
@@ -254,6 +272,7 @@ Biggest HCM threat in upmarket hospitality. Claims 77% of Fortune 1000 hospitali
 
 - **Category:** HCM
 - **Primary URL:** https://www.paylocity.com/
+- **public_pricing:** false (pricing page exists but does not publish dollar amounts — per-employee model is described but actual rates require sales contact; skip automated pricing extraction)
 
 ### Known pages
 
@@ -279,6 +298,7 @@ Mid-market HCM, per-employee-per-month pricing (no per-payroll-run fees). Less h
 
 - **Category:** HCM
 - **Primary URL:** https://www.adp.com/
+- **public_pricing:** false (pricing is gated behind a 1-888 sales form — skip automated pricing extraction)
 
 ### Known pages
 

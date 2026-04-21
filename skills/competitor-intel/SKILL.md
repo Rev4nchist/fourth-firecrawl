@@ -18,6 +18,8 @@ allowed-tools:
 
 Targeted, schema-driven competitor research. Produces structured, comparable intel that drops cleanly into Fourth's Marketing Brain KB under the `competitive/` folder.
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_extract` or `mcp__firecrawl-official__firecrawl_extract`). Examples below use the short names `firecrawl_scrape`, `firecrawl_map`, `firecrawl_extract`, `firecrawl_agent`, and `firecrawl_agent_status`; Claude will match by intent — call whichever full names are registered in your session.
+
 ## Purpose
 
 - Scrape competitor pricing, features, case studies, and positioning from their own web properties.
@@ -40,7 +42,7 @@ Targeted, schema-driven competitor research. Produces structured, comparable int
 
 ## Prerequisites
 
-1. Firecrawl MCP must be connected — if `mcp__firecrawl__firecrawl_extract` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
+1. Firecrawl MCP must be connected — if `firecrawl_extract` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
 2. Read the competitor registry to resolve name -> URLs:
    - `${CLAUDE_PLUGIN_ROOT}/references/competitor-registry.md`
 3. Pick the extraction schema that matches your intent:
@@ -66,12 +68,19 @@ The full URL catalog (pricing pages, resources, case study indices) lives in `${
 ## Workflow
 
 1. **Resolve competitor** -> read registry, pick URLs relevant to the topic (pricing / features / case studies).
-2. **Pick schema** -> match intent to a schema file under `${CLAUDE_PLUGIN_ROOT}/references/extraction-schemas/`.
-3. **Stage output directory** -> `mkdir -p .firecrawl/competitor-intel`.
-4. **Run `mcp__firecrawl__firecrawl_extract` with schema** (or `mcp__firecrawl__firecrawl_scrape` for simple single pages).
-5. **Write the result** to `.firecrawl/competitor-intel/<slug>-<topic>-<YYYYMMDD>.json` using the Write tool.
-6. **Review the staged file** -> Read the output.
-7. **Next step:** suggest running the `kb-ingest-review` skill to push approved content into the Marketing Brain KB with source metadata `competitor-crawl`.
+2. **Check `public_pricing` flag (PRICING REQUESTS ONLY)** -> before any pricing extract, read the competitor's entry in `${CLAUDE_PLUGIN_ROOT}/references/competitor-registry.md`. If `public_pricing: false`, **SKIP the pricing page extract entirely** — don't burn credits on a gated page. Tell the user:
+   > "`<competitor>` pricing is quote-only (gated). Refer to captured Fourth proposals and sales data in the Marketing Brain KB (`competitive/<vendor>-pricing-*`) instead of scraping. I can scan the KB or move on to features/case studies if you'd like."
+   Only proceed to a pricing extract when `public_pricing: true`.
+3. **Pick schema** -> match intent to a schema file under `${CLAUDE_PLUGIN_ROOT}/references/extraction-schemas/`.
+4. **Stage output directory** -> `mkdir -p .firecrawl/competitor-intel`.
+5. **Run `firecrawl_extract` with schema** (or `firecrawl_scrape` for simple single pages).
+6. **Validate the extract (CASE STUDIES ONLY)** -> after extracting a case study, check the `publication_date` field:
+   - If `publication_date` equals today's date (the scrape date), the model hallucinated it — the source page has no reliable date. **Drop the field** from the written output (set to `null` or omit entirely).
+   - Log the miss in a comment in the output file so we know which source pages have no reliable date (e.g., `// publication_date missing on source — model returned today's date, dropped`).
+   - Apply the same rule to other date fields where today's-date would be a hallucination signal (e.g., `announcement_date` on press releases).
+7. **Write the result** to `.firecrawl/competitor-intel/<slug>-<topic>-<YYYYMMDD>.json` using the Write tool.
+8. **Review the staged file** -> Read the output.
+9. **Next step:** suggest running the `kb-ingest-review` skill to push approved content into the Marketing Brain KB with source metadata `competitor-crawl`.
 
 ## Examples
 
@@ -87,7 +96,7 @@ Read the schema file with the Read tool, then inline it into the MCP call.
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_extract",
+  "name": "firecrawl_extract",
   "arguments": {
     "urls": ["https://restaurant365.com/pricing"],
     "prompt": "Extract pricing tiers for Restaurant365 including name, monthly price, user limits, features",
@@ -118,7 +127,7 @@ Then Write the result to `.firecrawl/competitor-intel/r365-pricing-<YYYYMMDD>.js
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_extract",
+  "name": "firecrawl_extract",
   "arguments": {
     "urls": [
       "https://7shifts.com/features",
@@ -152,7 +161,7 @@ Step 1 — discover case study URLs:
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://deputy.com/case-studies",
     "limit": 50
@@ -164,7 +173,7 @@ Step 2 — scrape a selected case study (repeat for each URL):
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://deputy.com/case-studies/restaurant-brand-a",
     "formats": ["markdown"],
@@ -177,7 +186,7 @@ Step 2 — scrape a selected case study (repeat for each URL):
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://wheniwork.com/pricing",
     "formats": ["markdown"],
@@ -193,7 +202,7 @@ When you don't know which pages hold the data, use the async agent. Poll `firecr
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_agent",
+  "name": "firecrawl_agent",
   "arguments": {
     "prompt": "Find Restaurant365's published pricing tiers across their site and pull feature lists for each tier",
     "urls": ["https://restaurant365.com"]
@@ -205,10 +214,10 @@ When you don't know which pages hold the data, use the async agent. Poll `firecr
 
 | Tool | Source skill | Notes |
 |------|--------------|-------|
-| `mcp__firecrawl__firecrawl_extract` | `../firecrawl-agent` | Schema-driven extraction, fast |
-| `mcp__firecrawl__firecrawl_agent` + `_status` | `../firecrawl-agent` | Autonomous research, async |
-| `mcp__firecrawl__firecrawl_scrape` | `../firecrawl-scrape` | Single-page markdown or JSON |
-| `mcp__firecrawl__firecrawl_map` | `../firecrawl-map` | URL discovery before scrape |
+| `firecrawl_extract` | `../firecrawl-agent` | Schema-driven extraction, fast |
+| `firecrawl_agent` + `_status` | `../firecrawl-agent` | Autonomous research, async |
+| `firecrawl_scrape` | `../firecrawl-scrape` | Single-page markdown or JSON |
+| `firecrawl_map` | `../firecrawl-map` | URL discovery before scrape |
 
 Always stage output under `.firecrawl/competitor-intel/` via the Write tool.
 

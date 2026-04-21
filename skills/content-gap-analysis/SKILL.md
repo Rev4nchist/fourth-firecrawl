@@ -18,6 +18,8 @@ allowed-tools:
 
 Three-way comparison that surfaces content angles Fourth should publish. Competitor content is scraped, Fourth's KB is queried, and the delta is written up as a gap report with proposed angles.
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_map` or `mcp__firecrawl-official__firecrawl_map`). Examples below use the short names `firecrawl_map`, `firecrawl_scrape`, `firecrawl_extract`, `firecrawl_agent`, and `firecrawl_agent_status`; Claude will match by intent — call whichever full names are registered in your session.
+
 ## Purpose
 
 - Enumerate what competitors are publishing on their blogs, resource hubs, and learning centers.
@@ -40,7 +42,7 @@ Three-way comparison that surfaces content angles Fourth should publish. Competi
 
 ## Prerequisites
 
-1. Firecrawl MCP must be connected — if `mcp__firecrawl__firecrawl_map` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
+1. Firecrawl MCP must be connected — if `firecrawl_map` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
 2. Competitor registry for blog/resource URLs:
    - `${CLAUDE_PLUGIN_ROOT}/references/competitor-registry.md`
 3. Fourth Marketing Brain MCP access — ideally the `fourth-marketing-brain` MCP is registered with `search_documents` available. If not registered in the current session, the skill will prompt the user to run KB searches manually.
@@ -49,7 +51,7 @@ Three-way comparison that surfaces content angles Fourth should publish. Competi
 ## Workflow
 
 1. **Scope** -> identify the competitor(s) and topic domain (scheduling, labor forecasting, tip pooling, HR, etc.).
-2. **Enumerate competitor content** -> `mcp__firecrawl__firecrawl_map` on their blog / resources root, then `mcp__firecrawl__firecrawl_scrape` titles + summaries for top N.
+2. **Enumerate competitor content** -> `firecrawl_map` on their blog / resources root, then `firecrawl_scrape` titles + summaries for top N.
 3. **Query Fourth KB** -> use `mcp__fourth-marketing-brain__search_documents` (if available) with the same topic terms.
 4. **Compute the delta** -> topics the competitor covers that Fourth does not.
 5. **Propose angles** -> for each gap, write a Fourth-voice angle that differentiates instead of imitating.
@@ -68,7 +70,7 @@ mkdir -p .firecrawl/content-gaps
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://restaurant365.com/blog",
     "limit": 200
@@ -78,7 +80,7 @@ mkdir -p .firecrawl/content-gaps
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://restaurant365.com/resources",
     "limit": 100
@@ -92,7 +94,7 @@ Write each response to `.firecrawl/content-gaps/r365-blog-urls.json` and `...res
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://restaurant365.com/blog/labor-forecasting",
     "formats": ["markdown"],
@@ -107,7 +109,7 @@ When you have the URL list from Step 1, use `firecrawl_extract` with a taxonomy 
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_extract",
+  "name": "firecrawl_extract",
   "arguments": {
     "urls": [
       "https://restaurant365.com/blog/labor-forecasting",
@@ -140,7 +142,7 @@ Alternative: open-ended cluster with the autonomous agent (slower, more expensiv
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_agent",
+  "name": "firecrawl_agent",
   "arguments": {
     "prompt": "Cluster the blog posts at this site by topic and return a topic taxonomy with post counts per topic",
     "urls": ["https://restaurant365.com/blog"]
@@ -205,10 +207,10 @@ Output `.firecrawl/content-gaps/<competitor>-gaps-<YYYYMMDD>.md`:
 
 | Tool | Source skill | Notes |
 |------|--------------|-------|
-| `mcp__firecrawl__firecrawl_map` | `../firecrawl-map` | Enumerate competitor content URLs |
-| `mcp__firecrawl__firecrawl_scrape` | `../firecrawl-scrape` | Grab titles and summaries |
-| `mcp__firecrawl__firecrawl_extract` | `../firecrawl-agent` | Schema-driven clustering (preferred) |
-| `mcp__firecrawl__firecrawl_agent` + `_status` | `../firecrawl-agent` | Autonomous clustering (fallback) |
+| `firecrawl_map` | `../firecrawl-map` | Enumerate competitor content URLs |
+| `firecrawl_scrape` | `../firecrawl-scrape` | Grab titles and summaries |
+| `firecrawl_extract` | `../firecrawl-agent` | Schema-driven clustering (preferred) |
+| `firecrawl_agent` + `_status` | `../firecrawl-agent` | Autonomous clustering (fallback) |
 
 Stage all output under `.firecrawl/content-gaps/` via the Write tool.
 

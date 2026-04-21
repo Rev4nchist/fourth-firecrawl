@@ -15,9 +15,11 @@ allowed-tools:
 
 Two MCP tools cover structured extraction: `firecrawl_extract` (you know the URLs, you have a schema) and `firecrawl_agent` (autonomous research, open-ended).
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_extract` or `mcp__firecrawl-official__firecrawl_extract`). Examples below use the short names `firecrawl_extract`, `firecrawl_agent`, and `firecrawl_agent_status`; Claude will match by intent — call whichever full names are registered in your session.
+
 ## Preflight
 
-If `mcp__firecrawl__firecrawl_extract` or `mcp__firecrawl__firecrawl_agent` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+If `firecrawl_extract` or `firecrawl_agent` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
 
 ## Which Tool to Use
 
@@ -48,7 +50,7 @@ Sync. Point it at URLs + schema, get structured records.
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_extract",
+  "name": "firecrawl_extract",
   "arguments": {
     "urls": ["https://www.r365hub.com/pricing"],
     "prompt": "Extract all pricing tiers including name, monthly price, user limits, features",
@@ -77,7 +79,7 @@ Sync. Point it at URLs + schema, get structured records.
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_extract",
+  "name": "firecrawl_extract",
   "arguments": {
     "urls": [
       "https://competitor-a.com/pricing",
@@ -101,8 +103,8 @@ The agent navigates the web on its own. Slow (minutes), expensive, but handles o
 
 ### Two-Step Async Flow
 
-1. Start a job with `mcp__firecrawl__firecrawl_agent` — returns a job id.
-2. Poll `mcp__firecrawl__firecrawl_agent_status` with `{ id }` every 10-30s until `status === "completed"`.
+1. Start a job with `firecrawl_agent` — returns a job id.
+2. Poll `firecrawl_agent_status` with `{ id }` every 10-30s until `status === "completed"`.
 
 ### Parameters (firecrawl_agent)
 
@@ -122,7 +124,7 @@ The agent navigates the web on its own. Slow (minutes), expensive, but handles o
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_agent",
+  "name": "firecrawl_agent",
   "arguments": {
     "prompt": "Find all US-based hospitality workforce management vendors with published pricing pages, and extract their pricing tiers",
     "schema": {
@@ -149,7 +151,7 @@ Then poll:
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_agent_status",
+  "name": "firecrawl_agent_status",
   "arguments": { "id": "agent-abc123" }
 }
 ```
@@ -158,7 +160,7 @@ Then poll:
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_agent",
+  "name": "firecrawl_agent",
   "arguments": {
     "prompt": "Extract all case studies with customer name, industry, and headline result",
     "urls": [

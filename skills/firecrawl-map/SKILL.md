@@ -13,9 +13,11 @@ allowed-tools:
 
 Discover URLs on a single site via the hosted Firecrawl MCP. Optionally filter URLs by a search query to find a specific page fast.
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_map` or `mcp__firecrawl-official__firecrawl_map`). Examples below use the short name `firecrawl_map`; Claude will match by intent — call whichever full name is registered in your session.
+
 ## Preflight
 
-If `mcp__firecrawl__firecrawl_map` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+If `firecrawl_map` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
 
 ## When to Use
 
@@ -27,7 +29,7 @@ If `mcp__firecrawl__firecrawl_map` is NOT in the available toolset, STOP. Instru
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://docs.r365hub.com",
     "search": "pricing"
@@ -52,7 +54,7 @@ If `mcp__firecrawl__firecrawl_map` is NOT in the available toolset, STOP. Instru
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://docs.example.com",
     "search": "authentication",
@@ -65,7 +67,7 @@ If `mcp__firecrawl__firecrawl_map` is NOT in the available toolset, STOP. Instru
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://www.7shifts.com",
     "limit": 500,
@@ -78,7 +80,7 @@ If `mcp__firecrawl__firecrawl_map` is NOT in the available toolset, STOP. Instru
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://restaurant365.com/blog",
     "limit": 200

@@ -28,5 +28,9 @@ accessed via hosted transport at https://mcp.firecrawl.dev/v2/mcp.
 Each user authenticates their own account — this plugin does not
 ship, proxy, or share API keys.
 
+v1.2.0: removed bundled MCP declaration — plugin now expects the
+user's Cowork workspace to have a separately-registered Firecrawl
+connector. No `.mcp.json` is shipped at the plugin root.
+
 See CHANGES-FROM-UPSTREAM.md for a tracked diff of additions
 and modifications relative to the upstream repository.

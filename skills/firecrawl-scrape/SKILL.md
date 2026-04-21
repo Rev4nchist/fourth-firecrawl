@@ -13,9 +13,11 @@ allowed-tools:
 
 Single-URL scrape via the hosted Firecrawl MCP. Returns clean, LLM-optimized markdown. The fastest, most reliable scraper for one page at a time.
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_scrape` or `mcp__firecrawl-official__firecrawl_scrape`). Examples below use the short name `firecrawl_scrape`; Claude will match by intent — call whichever full name is registered in your session.
+
 ## Preflight
 
-If `mcp__firecrawl__firecrawl_scrape` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+If `firecrawl_scrape` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
 
 ## When to Use
 
@@ -28,7 +30,7 @@ If `mcp__firecrawl__firecrawl_scrape` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://www.r365hub.com/pricing",
     "formats": ["markdown"],
@@ -64,7 +66,7 @@ If `mcp__firecrawl__firecrawl_scrape` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://www.r365hub.com/pricing",
     "formats": ["markdown"],
@@ -77,7 +79,7 @@ If `mcp__firecrawl__firecrawl_scrape` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://app.example.com/dashboard",
     "formats": ["markdown"],
@@ -91,7 +93,7 @@ If `mcp__firecrawl__firecrawl_scrape` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://competitor.com/pricing",
     "formats": [
@@ -114,7 +116,7 @@ If `mcp__firecrawl__firecrawl_scrape` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://example.com/blog",
     "formats": ["markdown", "links"],

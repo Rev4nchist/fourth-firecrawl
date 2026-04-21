@@ -14,9 +14,11 @@ allowed-tools:
 
 Async bulk extraction via the hosted Firecrawl MCP. Starts a crawl job, returns a job id, and you poll for status + results.
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_crawl` or `mcp__firecrawl-official__firecrawl_crawl`). Examples below use the short names `firecrawl_crawl` and `firecrawl_check_crawl_status`; Claude will match by intent — call whichever full names are registered in your session.
+
 ## Preflight
 
-If `mcp__firecrawl__firecrawl_crawl` or `mcp__firecrawl__firecrawl_check_crawl_status` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+If `firecrawl_crawl` or `firecrawl_check_crawl_status` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
 
 ## When to Use
 
@@ -28,8 +30,8 @@ If `mcp__firecrawl__firecrawl_crawl` or `mcp__firecrawl__firecrawl_check_crawl_s
 
 Crawls run asynchronously. You must:
 
-1. Call `mcp__firecrawl__firecrawl_crawl` — returns `{ id, url }`.
-2. Poll `mcp__firecrawl__firecrawl_check_crawl_status` with `{ id }` every 10-30s until `status` is `completed`.
+1. Call `firecrawl_crawl` — returns `{ id, url }`.
+2. Poll `firecrawl_check_crawl_status` with `{ id }` every 10-30s until `status` is `completed`.
 3. When complete, the status response contains the extracted pages.
 
 ## Quick Start
@@ -38,7 +40,7 @@ Crawls run asynchronously. You must:
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_crawl",
+  "name": "firecrawl_crawl",
   "arguments": {
     "url": "https://docs.example.com",
     "includePaths": ["/docs"],
@@ -57,7 +59,7 @@ Response contains an `id`, e.g. `"crawl-abc123"`.
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_check_crawl_status",
+  "name": "firecrawl_check_crawl_status",
   "arguments": {
     "id": "crawl-abc123"
   }
@@ -97,7 +99,7 @@ Repeat until `status === "completed"`. Response will contain the crawled pages.
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_crawl",
+  "name": "firecrawl_crawl",
   "arguments": {
     "url": "https://docs.r365hub.com",
     "includePaths": ["/docs"],
@@ -115,7 +117,7 @@ Repeat until `status === "completed"`. Response will contain the crawled pages.
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_crawl",
+  "name": "firecrawl_crawl",
   "arguments": {
     "url": "https://www.example.com",
     "excludePaths": ["/admin", "/careers", "/legal"],
@@ -132,7 +134,7 @@ Repeat until `status === "completed"`. Response will contain the crawled pages.
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_crawl",
+  "name": "firecrawl_crawl",
   "arguments": {
     "url": "https://example.com",
     "allowSubdomains": true,

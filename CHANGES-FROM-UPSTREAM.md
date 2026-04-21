@@ -110,3 +110,53 @@ Cowork sandbox blocks `npm install -g` and arbitrary HTTPS from bash. The v1.0 C
 ### Re-sync strategy (updated)
 
 Upstream firecrawl-claude-plugin is still CLI-based. We are now deeply diverged — sync from upstream is unlikely to be useful. Track [firecrawl-mcp-server](https://github.com/firecrawl/firecrawl-mcp-server) for new MCP tool additions or parameter changes instead.
+
+---
+
+## v1.2.0 — Reliability fixes from Donna's v1.1.0 Cowork test report (2026-04-21)
+
+### Why
+
+Donna's end-to-end test of v1.1.0 in Cowork (2026-04-21) surfaced four reliability issues that either broke live execution, wasted credits, or produced hallucinated output. This release fixes all four. Priority on reliability and accuracy, not credit efficiency. Source findings: P1, P2, P5, P6 from the test report.
+
+### Deleted
+
+- `.mcp.json` at plugin root — **P1 fix**. The plugin-bundled connector declaration was racing with the Cowork-registered Firecrawl connector, surfacing two Firecrawl connectors in the same session (one persistent `mcp__<uuid>__*`, one plugin-bundled `mcp__plugin_fourth-firecrawl_firecrawl__*` that cycled on and off). v1.2 now expects the Firecrawl connector to be registered at the Cowork workspace level only — no bundled MCP declaration.
+
+### Modified
+
+#### Skills — namespace portability (P2 fix)
+
+All 9 firecrawl-using skills (`competitor-intel`, `market-scan`, `content-gap-analysis`, `firecrawl-scrape`, `firecrawl-search`, `firecrawl-map`, `firecrawl-crawl`, `firecrawl-agent`, `firecrawl-interact`):
+
+- **Body/examples**: replaced hard-coded `mcp__firecrawl__firecrawl_scrape` (and all 9 other tool variants) with the bare tool names (`firecrawl_scrape`, `firecrawl_search`, `firecrawl_map`, `firecrawl_crawl`, `firecrawl_check_crawl_status`, `firecrawl_extract`, `firecrawl_agent`, `firecrawl_agent_status`, `firecrawl_interact`, `firecrawl_interact_stop`). The v1.1 hard-coded prefix failed literal execution in Cowork, where the live tool namespace is UUID-prefixed (e.g. `mcp__68cba2b7-…__firecrawl_scrape`) or connector-named.
+- **Frontmatter `allowed-tools`**: kept the `mcp__firecrawl__*` pattern — Claude's tool allowlist system uses glob matching so this is still safe as a declarative allow pattern.
+- **New note near the top of each skill**: explicit callout that the runtime namespace may be prefixed, and Claude will match the registered tool by intent.
+
+`kb-ingest-review` is unchanged — it does not call Firecrawl tools.
+
+#### `references/competitor-registry.md` — `public_pricing` flag (P6 fix)
+
+Added a `public_pricing: true|false` field to each of the 11 competitor entries:
+
+- `false` (pricing is gated / quote-only): **Restaurant365, Toast, Push Operations, Paycom, UKG, Paylocity, ADP** (7 competitors)
+- `true` (real dollar amounts on the pricing page): **7shifts, Deputy, When I Work, Homebase** (4 competitors)
+
+Added an explanation section at the top of the registry describing the flag's intent — skills should skip automated pricing extraction on `public_pricing: false` vendors and reference captured Fourth sales data in the Marketing Brain KB instead. Root cause: v1.1 ran `firecrawl_extract` on R365's gated pricing page, returning empty arrays and burning ~25 credits per run.
+
+#### `skills/competitor-intel/SKILL.md` — preflight + hallucination filter (P5 + P6 fix)
+
+Two new workflow steps:
+
+- **Step 2 (new)**: Before a pricing extract, check the competitor's `public_pricing` flag in the registry. If `false`, SKIP the pricing page extract and tell the user to refer to captured Fourth proposals in the Marketing Brain KB instead. Saves credits on guaranteed-empty extractions.
+- **Step 6 (new)**: After extracting a case study (or similar dated artifact), validate the `publication_date` field. If it equals the scrape date (today's date), the model hallucinated it — drop the field from the output and log the miss so we know which source pages lack reliable dates.
+
+### Updated docs
+
+- `.claude-plugin/plugin.json` — version → `1.2.0`; description updated to note the Cowork-registered connector expectation and that the plugin no longer ships its own MCP declaration.
+- `.claude-plugin/marketplace.json` — version → `1.2.0` (new field); description aligned with the plugin manifest.
+- `NOTICE` — added a v1.2.0 note recording the removal of the bundled MCP declaration.
+
+### Re-sync strategy (unchanged)
+
+Still deeply diverged from upstream firecrawl-claude-plugin. Track [firecrawl-mcp-server](https://github.com/firecrawl/firecrawl-mcp-server) for tool changes.

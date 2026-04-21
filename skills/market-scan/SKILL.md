@@ -16,6 +16,8 @@ allowed-tools:
 
 Time-bounded sweep of curated hospitality trade press. Produces a dated markdown brief with source attribution that feeds EBR narratives and marketing positioning.
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_search` or `mcp__firecrawl-official__firecrawl_search`). Examples below use the short names `firecrawl_search`, `firecrawl_scrape`, and `firecrawl_map`; Claude will match by intent — call whichever full names are registered in your session.
+
 ## Purpose
 
 - Surface industry news, trends, and signals the CSM or marketing team can cite.
@@ -38,7 +40,7 @@ Time-bounded sweep of curated hospitality trade press. Produces a dated markdown
 
 ## Prerequisites
 
-1. Firecrawl MCP must be connected — if `mcp__firecrawl__firecrawl_search` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
+1. Firecrawl MCP must be connected — if `firecrawl_search` (or any firecrawl tool) is not in the available toolset, run `/fourth-firecrawl:setup` to wire it up. Do not fall back to WebFetch or WebSearch.
 2. Source catalog:
    - `${CLAUDE_PLUGIN_ROOT}/references/hospitality-sources.md` — canonical list of NRN, FSR, Skift, Hotel News Now, Restaurant Business, NRA, AHLA, Restaurant Dive, etc.
 3. Voice guide (optional but preferred for write-up):
@@ -50,7 +52,7 @@ Time-bounded sweep of curated hospitality trade press. Produces a dated markdown
 1. **Clarify scope** -> topic + segment + time window (past week? past month? past quarter?).
 2. **Pick sources** -> read `${CLAUDE_PLUGIN_ROOT}/references/hospitality-sources.md`, select 3-6 relevant domains.
 3. **Stage output directory** -> `mkdir -p .firecrawl/market-scan`.
-4. **Run search or map+scrape** -> prefer `mcp__firecrawl__firecrawl_search` with `sources: [{ "type": "news" }]` and `tbs` time filters.
+4. **Run search or map+scrape** -> prefer `firecrawl_search` with `sources: [{ "type": "news" }]` and `tbs` time filters.
 5. **Write the brief** -> dated markdown file with source attribution table + Fourth-voice summary via the Write tool.
 6. **Next step:** suggest `kb-ingest-review` if the sweep has reusable insights for the KB under `messaging/` or `competitive/` folders.
 
@@ -66,7 +68,7 @@ mkdir -p .firecrawl/market-scan
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_search",
+  "name": "firecrawl_search",
   "arguments": {
     "query": "restaurant labor legislation 2026",
     "sources": [{ "type": "news" }],
@@ -86,7 +88,7 @@ Then Write the returned JSON to `.firecrawl/market-scan/labor-legislation-<YYYYM
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_search",
+  "name": "firecrawl_search",
   "arguments": {
     "query": "site:nrn.com tipping",
     "sources": [{ "type": "news" }],
@@ -106,7 +108,7 @@ Step 1 — find recent coverage pages:
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_map",
+  "name": "firecrawl_map",
   "arguments": {
     "url": "https://www.nrn.com",
     "search": "AI in restaurants",
@@ -119,7 +121,7 @@ Step 2 — scrape a chosen article (repeat for each URL):
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://www.nrn.com/technology/article-one",
     "formats": ["markdown"],
@@ -130,7 +132,7 @@ Step 2 — scrape a chosen article (repeat for each URL):
 
 ### Sweep across multiple topics
 
-Run `mcp__firecrawl__firecrawl_search` once per topic in sequence (the MCP handles concurrency server-side). Example topics:
+Run `firecrawl_search` once per topic in sequence (the MCP handles concurrency server-side). Example topics:
 
 - `ghost kitchens` / `qdr:m`
 - `hotel labor shortage` / `qdr:m`
@@ -160,9 +162,9 @@ The `sources` parameter (array of `{ type: "web" | "news" | "images" }`) narrows
 
 | Tool | Source skill | Notes |
 |------|--------------|-------|
-| `mcp__firecrawl__firecrawl_search` | `../firecrawl-search` | News + time-filtered search; inline scrape via `scrapeOptions` |
-| `mcp__firecrawl__firecrawl_map` | `../firecrawl-map` | Pin to a single trade-press domain |
-| `mcp__firecrawl__firecrawl_scrape` | `../firecrawl-scrape` | Fetch an individual article |
+| `firecrawl_search` | `../firecrawl-search` | News + time-filtered search; inline scrape via `scrapeOptions` |
+| `firecrawl_map` | `../firecrawl-map` | Pin to a single trade-press domain |
+| `firecrawl_scrape` | `../firecrawl-scrape` | Fetch an individual article |
 
 Stage all output under `.firecrawl/market-scan/` via the Write tool.
 

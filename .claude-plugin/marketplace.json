@@ -7,7 +7,8 @@
     {
       "name": "fourth-firecrawl",
       "source": "./",
-      "description": "Fourth-tailored fork of the Firecrawl Claude plugin, rebuilt MCP-first for Claude Cowork. Task-oriented skills for competitor intel, hospitality market scans, content gap analysis, and staged KB ingestion. Per-user keys via hosted Firecrawl MCP — no shared keys.",
+      "version": "1.2.0",
+      "description": "Fourth-tailored fork of the Firecrawl Claude plugin, rebuilt MCP-first for Claude Cowork. Task-oriented skills for competitor intel, hospitality market scans, content gap analysis, and staged KB ingestion. Uses your Cowork-registered Firecrawl connector — no bundled MCP declaration, per-user keys only.",
       "skills": [
         "./skills/competitor-intel",
         "./skills/market-scan",

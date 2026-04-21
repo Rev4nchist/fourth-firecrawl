@@ -15,9 +15,11 @@ allowed-tools:
 
 Two paths for interactive pages: inline `actions` on `firecrawl_scrape` (simple pre-extract steps), or `firecrawl_interact` against a scrapeId (live browser session after scraping).
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_interact` or `mcp__firecrawl-official__firecrawl_interact`). Examples below use the short names `firecrawl_scrape`, `firecrawl_interact`, and `firecrawl_interact_stop`; Claude will match by intent — call whichever full names are registered in your session.
+
 ## Preflight
 
-If `mcp__firecrawl__firecrawl_scrape` and `mcp__firecrawl__firecrawl_interact` are NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+If `firecrawl_scrape` and `firecrawl_interact` are NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
 
 ## When to Use
 
@@ -43,7 +45,7 @@ Best when you need a live browser session that stays open across multiple operat
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://example.com/dynamic",
     "formats": ["markdown"],
@@ -60,7 +62,7 @@ Best when you need a live browser session that stays open across multiple operat
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://example.com/search",
     "formats": ["markdown"],
@@ -81,7 +83,7 @@ Supported action types include: `click`, `wait`, `write`, `press`, `screenshot`,
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_scrape",
+  "name": "firecrawl_scrape",
   "arguments": {
     "url": "https://app.example.com/login",
     "formats": ["markdown"]
@@ -95,7 +97,7 @@ Response metadata includes a `scrapeId` (e.g., `"scrape-abc123"`).
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_interact",
+  "name": "firecrawl_interact",
   "arguments": {
     "scrapeId": "scrape-abc123",
     "prompt": "Fill the email field with user@example.com and click the login button"
@@ -107,7 +109,7 @@ Response metadata includes a `scrapeId` (e.g., `"scrape-abc123"`).
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_interact",
+  "name": "firecrawl_interact",
   "arguments": {
     "scrapeId": "scrape-abc123",
     "code": "agent-browser click @e5",
@@ -121,7 +123,7 @@ Response metadata includes a `scrapeId` (e.g., `"scrape-abc123"`).
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_interact_stop",
+  "name": "firecrawl_interact_stop",
   "arguments": {
     "scrapeId": "scrape-abc123"
   }

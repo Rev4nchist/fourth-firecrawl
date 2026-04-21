@@ -13,9 +13,11 @@ allowed-tools:
 
 Web search via the hosted Firecrawl MCP. Returns search results with optional inline scrape of each result's full page.
 
+> **Tool namespace:** your Cowork runtime may prefix Firecrawl tools with its connector UUID or name (e.g., `mcp__68cba2b7-…__firecrawl_search` or `mcp__firecrawl-official__firecrawl_search`). Examples below use the short name `firecrawl_search`; Claude will match by intent — call whichever full name is registered in your session.
+
 ## Preflight
 
-If `mcp__firecrawl__firecrawl_search` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
+If `firecrawl_search` is NOT in the available toolset, STOP. Instruct the user to run `/fourth-firecrawl:setup` to wire up the Firecrawl MCP. Do NOT fall back to WebFetch, WebSearch, or any substitute — the plugin's per-user credit accountability depends on MCP.
 
 ## When to Use
 
@@ -28,7 +30,7 @@ If `mcp__firecrawl__firecrawl_search` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_search",
+  "name": "firecrawl_search",
   "arguments": {
     "query": "restaurant365 pricing changes",
     "limit": 10,
@@ -67,7 +69,7 @@ If `mcp__firecrawl__firecrawl_search` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_search",
+  "name": "firecrawl_search",
   "arguments": {
     "query": "restaurant labor legislation 2026",
     "limit": 15,
@@ -81,7 +83,7 @@ If `mcp__firecrawl__firecrawl_search` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_search",
+  "name": "firecrawl_search",
   "arguments": {
     "query": "tipping compliance restaurants",
     "limit": 10,
@@ -99,7 +101,7 @@ If `mcp__firecrawl__firecrawl_search` is NOT in the available toolset, STOP. Ins
 
 ```json
 {
-  "name": "mcp__firecrawl__firecrawl_search",
+  "name": "firecrawl_search",
   "arguments": {
     "query": "site:nrn.com ghost kitchens",
     "limit": 20,

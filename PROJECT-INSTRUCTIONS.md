@@ -19,7 +19,7 @@ Before invoking any Firecrawl MCP tool, verify the MCP is connected.
 **How to check:** Look for tools whose names begin with `mcp__firecrawl__` in your available toolset.
 If those tools are present, the MCP is live. Proceed.
 
-**If the MCP is missing:**
+**If the Firecrawl MCP is missing:**
 - STOP immediately. Do not attempt to fulfill the request with any other tool.
 - Tell the user: "The Firecrawl MCP is not connected. Please run `/fourth-firecrawl:setup` or add
   the Firecrawl connector in your Cowork workspace settings (Organization > Connectors > Firecrawl),
@@ -30,6 +30,12 @@ If those tools are present, the MCP is live. Proceed.
 source registries, and staging conventions all depend on the MCP. It also breaks the per-user credit
 accountability model: if the MCP is absent, there is no Firecrawl API key in scope, meaning any
 fallback would either fail or bill incorrectly.
+
+**If the `fourth-product-brain` MCP is missing and the user's intent involves KB ingestion:**
+STOP and instruct the user to enable the `fourth-product-brain` connector in their Cowork workspace
+(Organization > Connectors > fourth-product-brain), then restart the conversation.
+Do not try to "save" content to a local file and call it KB ingestion — the Marketing Brain KB is
+the canonical home. A local file is a staging artifact, not an ingested document.
 
 ---
 
@@ -76,6 +82,8 @@ Use raw Firecrawl primitive skills (`firecrawl-scrape`, `firecrawl-map`, `firecr
 
 ## 4. MCP tool reference — canonical names
 
+### Firecrawl MCP tools
+
 All tool calls must use these exact names. No abbreviation, no substitution.
 
 | Tool name | Purpose | Pair with |
@@ -99,6 +107,24 @@ All tool calls must use these exact names. No abbreviation, no substitution.
 **Async tools require polling:** `firecrawl_crawl` and `firecrawl_agent` return a job id immediately.
 Poll the corresponding status tool every 15–30 seconds until `status` is `completed` or `failed`.
 Do not block the user while waiting — surface the job id and estimated wait time.
+
+### Fourth Product Brain (KB) MCP tools
+
+The KB MCP connector is named `fourth-product-brain`. Its remote URL is:
+`https://mcp-marketing-prod.happyhill-92303561.swedencentral.azurecontainerapps.io/mcp`
+
+Reference these tools by short name; the actual runtime namespace may be UUID-prefixed
+(e.g., `mcp__<uuid>__fourth-product-brain__create_document`). Match by intent.
+
+| Tool (short name) | Purpose | Required args |
+|---|---|---|
+| `mcp__fourth-product-brain__search_documents` | Search the KB; returns matching doc titles, folder, and snippet | `query`; optional: `folder` |
+| `mcp__fourth-product-brain__list_documents` | List all documents in a KB folder | `folder` |
+| `mcp__fourth-product-brain__create_document` | Create a new KB document | `folder`, `title`, `content`, `source`, `confidence` |
+| `mcp__fourth-product-brain__append_to_document` | Append content to an existing KB document | `folder`, `title`, `content` |
+
+These tools MUST only be called from within the `kb-ingest-review` skill, after per-document
+user confirmation. Never call them speculatively or outside the review gate.
 
 ---
 
@@ -124,14 +150,85 @@ Use lowercase, hyphen-separated file names. Use ISO date format (e.g., `2026-04-
 
 ### Ingestion rules
 
-- Never call KB MCP tools (`mcp__fourth-marketing-brain__create_document`,
-  `mcp__fourth-marketing-brain__append_to_document`) outside the `kb-ingest-review` skill.
+- Never call KB MCP tools (`mcp__fourth-product-brain__create_document`,
+  `mcp__fourth-product-brain__append_to_document`) outside the `kb-ingest-review` skill.
 - When ingesting, always populate the `source` metadata field with one of:
-  `competitor-crawl`, `web-research`, `market-scan`, or `content-gap-analysis` — whichever
+  `competitor-crawl`, `web-research`, `sales-call`, `rfp-ingestion`, or `manual` — whichever
   matches the origin of the content.
 - After confirmed ingestion, move the staged file to `.firecrawl/ingested/<YYYYMMDD>/`
   as an audit trail. Do not delete it.
 - If the user declines to ingest a document, leave it in staging unchanged.
+
+### KB organization rules
+
+These rules govern how staged content maps to KB folders, how documents are titled,
+and how quality metadata is assigned. Apply them during every `kb-ingest-review` run.
+
+#### Folder routing
+
+| Staged file path | KB folder | Source metadata value |
+|---|---|---|
+| `.firecrawl/competitor-intel/*.json` | `competitive` | `competitor-crawl` |
+| `.firecrawl/competitor-intel/*.md` | `competitive` | `competitor-crawl` |
+| `.firecrawl/market-scan/*.md` | `market-positioning` (use `competitive` if the content is competitor-specific news) | `web-research` |
+| `.firecrawl/content-gaps/*.md` | `messaging` | `web-research` |
+
+Other valid KB folders: `solutions`, `rfp-responses`, `compliance`, `integrations`.
+Route to these manually when the content clearly belongs there. When in doubt, ask the user.
+
+#### Title conventions
+
+Apply these title patterns when calling `create_document` or `append_to_document`:
+
+- Competitor profiles: `<Competitor> <Topic> - <YYYY-MM-DD>`
+  Example: `Restaurant365 Pricing - 2026-04-21`
+- Market scans: `Market Scan: <Topic> <Time Range>`
+  Example: `Market Scan: Tipping Legislation - Q1 2026`
+- Content gaps: `Content Gap: <Fourth Area> vs <Competitor>`
+  Example: `Content Gap: Scheduling Content vs 7shifts`
+
+Keep titles under 80 characters. No emoji. No markdown syntax (asterisks, backticks, brackets) in titles.
+
+#### Confidence scoring
+
+Every document ingested into the KB MUST include a `confidence` value. Never leave it blank.
+
+| Value | When to use |
+|---|---|
+| `HIGH` | Content is directly quoted from the competitor's official site with clean schema extraction and no model summarization. Every claim is verifiable against the source URL. |
+| `PARTIAL` | Model summarized or combined multiple pages; factual claims are present but some synthesis occurred. Most `competitor-intel` runs land here by default. |
+| `LOW` | Content includes speculation, marketing-claim paraphrasing, or untraceable numbers. Use when in doubt — it is always safer to downgrade than to overclaim. |
+
+#### Deduplication — search before create
+
+Before calling `create_document` for any topic, always search first:
+
+```
+mcp__fourth-product-brain__search_documents(query=<proposed title>, folder=<target folder>)
+```
+
+- If a document covering the same topic already exists (e.g., "Restaurant365 Pricing" from a prior run), use `append_to_document` with a dated H2 heading: `## Update: YYYY-MM-DD`
+- Do NOT create a duplicate document. One document per topic per competitor per KB folder.
+- If the existing document is materially outdated (content older than 90 days), ask the user whether to append or replace before proceeding.
+
+#### Confidence degradation on append
+
+When appending to an existing document: if the existing content carries `confidence: HIGH` but the
+new content is `PARTIAL` or `LOW`, the document's overall confidence must be downgraded to match
+the weakest content. Update the document's metadata accordingly on append.
+Truth decays — do not leave stale HIGH confidence on a document that now contains unverified content.
+
+#### Anti-patterns — never do these
+
+- Never write content straight from Firecrawl scrape output into the KB without passing through
+  `kb-ingest-review` (user approval gate required on every document).
+- Never set `confidence: HIGH` on content that includes marketing claims. Case study metrics such
+  as "50% less time" or "3x ROI" are marketing claims, not verifiable numbers, even if they appear
+  on the competitor's own site.
+- Never create a KB document with a `source` value outside the allowlist:
+  `competitor-crawl`, `web-research`, `sales-call`, `rfp-ingestion`, `manual`.
+- Never put Firecrawl staging JSON files directly into the KB. JSON is raw data. The KB requires
+  structured, Fourth-voice prose — extract the relevant narrative from the JSON first.
 
 ---
 
@@ -276,7 +373,8 @@ asks about a topic they cover. Do not rely on memory — always read the file.
 
 ## 12. Key facts about this plugin
 
-- **MCP endpoint:** `https://mcp.firecrawl.dev/v2/mcp` (streamable HTTP, Bearer auth)
+- **Firecrawl MCP endpoint:** `https://mcp.firecrawl.dev/v2/mcp` (streamable HTTP, Bearer auth)
+- **Fourth Product Brain MCP endpoint:** `https://mcp-marketing-prod.happyhill-92303561.swedencentral.azurecontainerapps.io/mcp`
 - **Auth model:** Each user connects with their own Firecrawl API key, injected by Cowork
   connector or `FIRECRAWL_API_KEY` environment variable. Credits bill to each user's account.
 - **No batch tools:** `firecrawl_batch_scrape` and `firecrawl_check_batch_status` are documented
@@ -290,3 +388,6 @@ asks about a topic they cover. Do not rely on memory — always read the file.
 - **Async polling pattern:** `firecrawl_crawl` and `firecrawl_agent` return a job id immediately.
   Always poll the corresponding status tool until the job completes. Never assume completion
   without a `completed` status response.
+- **KB MCP namespace:** The `fourth-product-brain` connector tools may appear with a UUID prefix
+  at runtime (e.g., `mcp__<uuid>__fourth-product-brain__create_document`). Match tools by their
+  short intent name, not the full prefixed name.
