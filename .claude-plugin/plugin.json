@@ -1,7 +1,7 @@
 {
   "name": "fourth-firecrawl",
-  "version": "1.2.0",
-  "description": "Fourth-tailored fork of the Firecrawl Claude plugin, rebuilt MCP-first for Claude Cowork. Ships task-oriented skills for competitor intelligence, hospitality market scans, content gap analysis, and staged KB ingestion into Fourth Marketing Brain. Bundles curated source catalogs (R365, HCM, NRN, FSR, Skift) and pre-built extraction schemas. Uses your Cowork-registered Firecrawl connector — the plugin no longer declares its own MCP, so it cooperates cleanly with the workspace-level connector and your per-user Bearer auth.",
+  "version": "1.2.1",
+  "description": "Fourth-tailored fork of the Firecrawl Claude plugin, rebuilt MCP-first for Claude Cowork. Task-oriented skills for competitor intel, hospitality market scans, content gap analysis, and staged KB ingestion into Fourth Marketing Brain. Bundles curated source catalogs (R365, HCM, NRN, FSR, Skift) and extraction schemas. Uses your Cowork-registered Firecrawl connector — per-user keys, no shared secrets.",
   "author": {
     "name": "Fourth AI Enablement Team"
   },

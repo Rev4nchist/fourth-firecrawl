@@ -170,7 +170,7 @@ and how quality metadata is assigned. Apply them during every `kb-ingest-review`
 |---|---|---|
 | `.firecrawl/competitor-intel/*.json` | `competitive` | `competitor-crawl` |
 | `.firecrawl/competitor-intel/*.md` | `competitive` | `competitor-crawl` |
-| `.firecrawl/market-scan/*.md` | `market-positioning` (use `competitive` if the content is competitor-specific news) | `web-research` |
+| `.firecrawl/market-scan/*.md` | `competitive` (use `competitive` if the content is competitor-specific news) | `web-research` |
 | `.firecrawl/content-gaps/*.md` | `messaging` | `web-research` |
 
 Other valid KB folders: `solutions`, `rfp-responses`, `compliance`, `integrations`.
