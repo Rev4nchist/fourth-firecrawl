@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+._*
+
+# Thumbnails
+Thumbs.db
+.firecrawl

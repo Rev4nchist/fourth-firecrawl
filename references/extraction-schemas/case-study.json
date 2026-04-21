@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fourth-marketing-brain/schemas/case-study.json",
+  "title": "Competitor Case Study",
+  "description": "Extracted structure for a vendor customer-story / case-study page. Use with `firecrawl scrape --schema-file` on URLs like /case-studies/*, /customers/*.",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "description": "Name of the customer featured in the case study."
+    },
+    "industry": {
+      "type": "string",
+      "enum": [
+        "restaurant_fsr",
+        "restaurant_qsr",
+        "restaurant_fast_casual",
+        "restaurant_fine_dining",
+        "restaurant_franchise",
+        "hotel_full_service",
+        "hotel_limited_service",
+        "hotel_resort",
+        "hotel_management_company",
+        "cafe_coffee",
+        "bar_pub_nightclub",
+        "catering_events",
+        "contract_foodservice",
+        "grocery_retail",
+        "other"
+      ],
+      "description": "Hospitality-relevant industry taxonomy. Use 'other' for non-hospitality verticals."
+    },
+    "company_size": {
+      "type": "object",
+      "properties": {
+        "locations_count": { "type": ["integer", "null"] },
+        "employees_count": { "type": ["integer", "null"] },
+        "size_descriptor": { "type": ["string", "null"], "description": "Free-text descriptor if exact numbers not given (e.g., 'multi-unit operator', 'enterprise')." }
+      }
+    },
+    "challenge": {
+      "type": "string",
+      "description": "Problem / pain point that drove the customer to adopt the product. Usually a paragraph."
+    },
+    "solution": {
+      "type": "string",
+      "description": "How the product was deployed / which modules used."
+    },
+    "results": {
+      "type": "array",
+      "description": "Quantified outcomes claimed in the case study.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "metric": { "type": "string", "description": "The thing being measured (e.g., 'labor cost %', 'scheduling time', 'turnover rate')." },
+          "before": { "type": ["string", "number", "null"] },
+          "after": { "type": ["string", "number", "null"] },
+          "improvement_pct": { "type": ["number", "null"], "description": "Percentage improvement if stated; negative values indicate reduction." },
+          "improvement_absolute": { "type": ["string", "null"], "description": "Absolute improvement in free text (e.g., 'saved 468 hours', 'added $447,000 to bottom line')." }
+        },
+        "required": ["metric"]
+      }
+    },
+    "quoted_stakeholder": {
+      "type": "object",
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "title": { "type": ["string", "null"] },
+        "quote": { "type": ["string", "null"] }
+      }
+    },
+    "product_used": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Specific products / modules referenced (e.g., ['R365 Scheduling', 'R365 Accounting'])."
+    },
+    "publication_date": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "ISO date the case study was published, if visible on page."
+    },
+    "source_url": { "type": "string", "format": "uri" }
+  },
+  "required": ["customer_name", "industry", "challenge", "solution", "results", "source_url"]
+}

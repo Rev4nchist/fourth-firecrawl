@@ -1,0 +1,20 @@
+{
+  "name": "fourth-firecrawl",
+  "owner": {
+    "name": "Fourth AI Enablement Team"
+  },
+  "plugins": [
+    {
+      "name": "fourth-firecrawl",
+      "source": "./",
+      "description": "Fourth-tailored fork of the Firecrawl Claude plugin. Task-oriented skills for competitor intel, hospitality market scans, content gap analysis, and staged KB ingestion into Fourth Marketing Brain.",
+      "skills": [
+        "./skills/firecrawl-cli",
+        "./skills/competitor-intel",
+        "./skills/market-scan",
+        "./skills/content-gap-analysis",
+        "./skills/kb-ingest-review"
+      ]
+    }
+  ]
+}

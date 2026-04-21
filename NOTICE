@@ -1,0 +1,26 @@
+fourth-firecrawl
+Copyright (c) 2026 Fourth AI Enablement Team
+
+This product is a fork of the Firecrawl Claude plugin.
+
+Upstream source:
+  https://github.com/firecrawl/firecrawl-claude-plugin
+  Copyright (c) Firecrawl
+  Licensed under AGPL-3.0
+
+Substantial additions by Fourth AI Enablement Team:
+  - Task-oriented skills: competitor-intel, market-scan,
+    content-gap-analysis, kb-ingest-review
+  - Curated source catalogs (hospitality trade press,
+    competitor registry)
+  - Pre-built JSON extraction schemas
+  - Fourth brand voice guide for summaries
+  - Credit budget guardrails
+  - Staged ingestion flow into Fourth Marketing Brain KB
+  - Team quickstart documentation
+
+This plugin remains licensed under AGPL-3.0 in compliance
+with upstream licensing terms. See LICENSE for full text.
+
+See CHANGES-FROM-UPSTREAM.md for a tracked diff of additions
+and modifications relative to the upstream repository.

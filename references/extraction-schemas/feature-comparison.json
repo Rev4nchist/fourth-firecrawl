@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fourth-marketing-brain/schemas/feature-comparison.json",
+  "title": "Feature Comparison",
+  "description": "Extracted structure for 'us vs them' comparison pages (e.g., 7shifts.com/compare/7shifts-vs-wheniwork/, joinhomebase.com/compare/*). Always frames the comparison FROM the page publisher's point of view, then normalizes to Fourth's perspective.",
+  "type": "object",
+  "properties": {
+    "competitor_name": {
+      "type": "string",
+      "description": "Name of the competitor (the 'them' side of the comparison)."
+    },
+    "our_product": {
+      "type": "string",
+      "const": "Fourth",
+      "description": "Fixed as 'Fourth' because these schemas support Fourth's competitive intelligence."
+    },
+    "page_publisher": {
+      "type": "string",
+      "description": "Who published the comparison page (e.g., '7shifts', 'Homebase'). Useful to flag bias — self-published vs third-party."
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category_name": {
+            "type": "string",
+            "description": "Feature category (e.g., 'Scheduling', 'Payroll', 'Labor Compliance', 'Inventory')."
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "feature_name": { "type": "string" },
+                "competitor_has": {
+                  "type": "string",
+                  "enum": ["yes", "partial", "no", "unknown"],
+                  "description": "Does the competitor have this feature per the page?"
+                },
+                "fourth_has": {
+                  "type": "string",
+                  "enum": ["yes", "partial", "no", "unknown"],
+                  "description": "Does Fourth have this feature? Fill in from Fourth's internal KB if not addressed on the source page."
+                },
+                "notes": {
+                  "type": "string",
+                  "description": "Any qualifying detail (e.g., 'competitor charges extra for this', 'Fourth only available in enterprise tier')."
+                }
+              },
+              "required": ["feature_name", "competitor_has"]
+            }
+          }
+        },
+        "required": ["category_name", "features"]
+      }
+    },
+    "overall_positioning_claim": {
+      "type": "string",
+      "description": "The headline positioning claim the page makes (e.g., 'Purpose-built for restaurants, unlike generic scheduling tools')."
+    },
+    "source_url": { "type": "string", "format": "uri" }
+  },
+  "required": ["competitor_name", "our_product", "categories", "source_url"]
+}

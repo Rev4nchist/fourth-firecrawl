@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fourth-marketing-brain/schemas/pricing-page.json",
+  "title": "Competitor Pricing Page",
+  "description": "Extracted structure for a vendor pricing page. Use with `firecrawl scrape --schema-file` or `firecrawl agent` when scraping any competitor's /pricing URL.",
+  "type": "object",
+  "properties": {
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product or platform being priced (e.g., 'Restaurant365', '7shifts')."
+    },
+    "pricing_model": {
+      "type": "string",
+      "enum": ["per_user", "per_location", "tiered", "quote_only", "per_employee", "flat_fee", "usage_based", "hybrid"],
+      "description": "Primary pricing model. Use 'quote_only' when the page says 'contact sales' with no visible prices."
+    },
+    "currency": {
+      "type": "string",
+      "description": "ISO 4217 currency code (e.g., 'USD', 'GBP', 'EUR'). Defaults to USD if unspecified on page."
+    },
+    "tiers": {
+      "type": "array",
+      "description": "Published plan tiers. Empty array if pricing is quote-only.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Tier name (e.g., 'Essentials', 'Plus', 'Enterprise')." },
+          "price": { "type": ["number", "string"], "description": "Price value, or 'custom' / 'contact sales' string if not published." },
+          "billing_period": { "type": "string", "enum": ["monthly", "annual", "quarterly", "per_pay_run", "one_time", "unknown"] },
+          "user_or_location_cap": { "type": ["string", "null"], "description": "Any cap stated (e.g., 'up to 10 employees', 'single location', or null if none)." },
+          "included_features": { "type": "array", "items": { "type": "string" }, "description": "Features listed as included in this tier." },
+          "excluded_features": { "type": "array", "items": { "type": "string" }, "description": "Features explicitly called out as NOT included (often in comparison tables)." }
+        },
+        "required": ["name", "price", "billing_period"]
+      }
+    },
+    "add_ons": {
+      "type": "array",
+      "description": "Paid add-on modules beyond the base tier.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "price": { "type": ["number", "string"] },
+          "billing_period": { "type": "string", "enum": ["monthly", "annual", "per_pay_run", "one_time", "unknown"] },
+          "notes": { "type": "string", "description": "Any qualifying detail (e.g., '+ $6 per employee paid')." }
+        },
+        "required": ["name", "price"]
+      }
+    },
+    "free_trial": {
+      "type": "object",
+      "properties": {
+        "available": { "type": "boolean" },
+        "days": { "type": ["integer", "null"] },
+        "credit_card_required": { "type": ["boolean", "null"] }
+      },
+      "required": ["available"]
+    },
+    "contact_required": {
+      "type": "boolean",
+      "description": "True if the page requires a sales conversation to get any price (no self-serve checkout)."
+    },
+    "source_url": { "type": "string", "format": "uri" },
+    "last_observed_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the page was scraped (ISO 8601 YYYY-MM-DD). Used to flag stale data."
+    }
+  },
+  "required": ["product_name", "pricing_model", "tiers", "contact_required", "source_url", "last_observed_date"]
+}

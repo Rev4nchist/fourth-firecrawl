@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fourth-marketing-brain/schemas/press-release.json",
+  "title": "Press Release",
+  "description": "Extracted structure for a press release, newsroom post, or 'in the news' article. Use with `firecrawl scrape --schema-file` on /press-release/*, /newsroom/*, /in-the-news/* URLs.",
+  "type": "object",
+  "properties": {
+    "headline": {
+      "type": "string",
+      "description": "Primary headline of the press release."
+    },
+    "publication_date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date the release was issued."
+    },
+    "company": {
+      "type": "string",
+      "description": "The company issuing or primarily featured in the release."
+    },
+    "announcement_type": {
+      "type": "string",
+      "enum": [
+        "funding",
+        "acquisition",
+        "product_launch",
+        "partnership",
+        "leadership_change",
+        "customer_milestone",
+        "earnings",
+        "award",
+        "other"
+      ],
+      "description": "Classification of what is being announced. Use 'other' only when none of the above fits."
+    },
+    "key_facts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Bulleted list of the core facts (what happened, how much, effective date, etc.)."
+    },
+    "quoted_executives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "title": { "type": "string" },
+          "quote": { "type": "string" }
+        },
+        "required": ["name", "title", "quote"]
+      }
+    },
+    "financial_details": {
+      "type": "object",
+      "description": "Applies to funding / acquisition / earnings announcements. Null or omitted otherwise.",
+      "properties": {
+        "amount": { "type": ["number", "string", "null"] },
+        "currency": { "type": ["string", "null"] },
+        "round_type": {
+          "type": ["string", "null"],
+          "enum": [
+            "seed",
+            "series_a",
+            "series_b",
+            "series_c",
+            "series_d",
+            "series_e_plus",
+            "growth",
+            "private_equity",
+            "debt",
+            "ipo",
+            "acquisition_price",
+            "quarterly_earnings",
+            "annual_earnings",
+            "other",
+            null
+          ]
+        },
+        "investors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named investors / acquirers / lenders."
+        }
+      }
+    },
+    "related_companies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Other organizations named in the release (customers, partners, acquirers, competitors referenced)."
+    },
+    "source_url": { "type": "string", "format": "uri" }
+  },
+  "required": ["headline", "publication_date", "company", "announcement_type", "key_facts", "source_url"]
+}
